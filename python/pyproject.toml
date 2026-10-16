@@ -1,0 +1,63 @@
+[project]
+name = "einargate"
+version = "0.1.0"
+description = "The official Python client of the Einar Gate API: typed results, safe retries, built for coding agents"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.10"
+dependencies = ["httpx>=0.27,<1"]
+keywords = ["einargate", "einar gate", "anpr", "license plate", "gate", "api", "sdk"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Typing :: Typed",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+Homepage = "https://einargate.com"
+Documentation = "https://github.com/einargate/einargate-sdk/blob/main/python/AGENTS.md"
+Repository = "https://github.com/einargate/einargate-sdk"
+Issues = "https://github.com/einargate/einargate-sdk/issues"
+
+[dependency-groups]
+dev = ["pytest>=8", "ruff>=0.6", "pyright[nodejs]>=1.1.380"]
+
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/einargate"]
+
+# The guide for coding agents, next to the code they read
+[tool.hatch.build.targets.wheel.force-include]
+"AGENTS.md" = "einargate/AGENTS.md"
+
+[tool.hatch.build.targets.sdist]
+include = ["src/einargate", "README.md", "AGENTS.md", "LICENSE"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py310"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "RUF"]
+ignore = ["E501", "RUF001", "RUF002", "RUF003"]
+
+[tool.ruff.lint.per-file-ignores]
+"src/einargate/_generated/*" = ["F401", "I001", "UP007", "RUF100"]
+
+[tool.pyright]
+include = ["src", "tests"]
+pythonVersion = "3.10"
+venvPath = "."
+venv = ".venv"
+typeCheckingMode = "standard"
+strict = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

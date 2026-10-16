@@ -1,0 +1,4918 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Einar Gate API",
+    "version": "1",
+    "description": "The public API of Einar Gate. Errors are RFC 9457 problem details (`application/problem+json`); clients must ignore unknown response members, tolerate unknown enum values and handle an unknown problem type by its HTTP status."
+  },
+  "servers": [
+    {
+      "url": "https://api.einargate.com/v1"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "The value of an API key, `Authorization: Bearer egk_…`. API keys are created in the Einar Gate app, and a value is shown once."
+      }
+    },
+    "schemas": {
+      "InvalidRequestProblem": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "https://developers.einargate.com/errors/invalid-request"
+            ]
+          },
+          "title": {
+            "type": "string",
+            "example": "Invalid request"
+          },
+          "status": {
+            "type": "number",
+            "enum": [
+              400
+            ]
+          },
+          "detail": {
+            "type": "string"
+          },
+          "instance": {
+            "type": "string",
+            "description": "The request path"
+          },
+          "requestId": {
+            "type": "string",
+            "description": "For support requests"
+          },
+          "errors": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "path": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "path",
+                "message"
+              ]
+            }
+          }
+        },
+        "required": [
+          "type",
+          "title",
+          "status",
+          "requestId",
+          "errors"
+        ],
+        "description": "Invalid request. Fix the members that `errors[]` lists and send the request again. A body member’s path is bare (`licensePlate`); query and path parameters are prefixed `query.` and `path.`."
+      },
+      "UnauthorizedProblem": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "https://developers.einargate.com/errors/unauthorized"
+            ]
+          },
+          "title": {
+            "type": "string",
+            "example": "Unauthorized"
+          },
+          "status": {
+            "type": "number",
+            "enum": [
+              401
+            ]
+          },
+          "detail": {
+            "type": "string"
+          },
+          "instance": {
+            "type": "string",
+            "description": "The request path"
+          },
+          "requestId": {
+            "type": "string",
+            "description": "For support requests"
+          }
+        },
+        "required": [
+          "type",
+          "title",
+          "status",
+          "requestId"
+        ],
+        "description": "Unauthorized. Send a working API key value as `Authorization: Bearer egk_…`. A value stops working when it is revoked, or retired after a rotation: get the current one from whoever manages the API key in the Einar Gate app."
+      },
+      "ForbiddenProblem": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "https://developers.einargate.com/errors/forbidden"
+            ]
+          },
+          "title": {
+            "type": "string",
+            "example": "Forbidden"
+          },
+          "status": {
+            "type": "number",
+            "enum": [
+              403
+            ]
+          },
+          "detail": {
+            "type": "string"
+          },
+          "instance": {
+            "type": "string",
+            "description": "The request path"
+          },
+          "requestId": {
+            "type": "string",
+            "description": "For support requests"
+          }
+        },
+        "required": [
+          "type",
+          "title",
+          "status",
+          "requestId"
+        ],
+        "description": "Forbidden. The API key lacks a role for this action, the path names another location, or the action needs an active subscription. `GET /me` shows the key’s roles, location and subscription state; a location Owner or Admin changes its roles in the app."
+      },
+      "NotFoundProblem": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "https://developers.einargate.com/errors/not-found"
+            ]
+          },
+          "title": {
+            "type": "string",
+            "example": "Not found"
+          },
+          "status": {
+            "type": "number",
+            "enum": [
+              404
+            ]
+          },
+          "detail": {
+            "type": "string"
+          },
+          "instance": {
+            "type": "string",
+            "description": "The request path"
+          },
+          "requestId": {
+            "type": "string",
+            "description": "For support requests"
+          }
+        },
+        "required": [
+          "type",
+          "title",
+          "status",
+          "requestId"
+        ],
+        "description": "Not found. Use ids exactly as the API returned them, under the API key’s own location, and URL-encode permission ids. Never build an id."
+      },
+      "ConflictProblem": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "https://developers.einargate.com/errors/conflict"
+            ]
+          },
+          "title": {
+            "type": "string",
+            "example": "Conflict"
+          },
+          "status": {
+            "type": "number",
+            "enum": [
+              409
+            ]
+          },
+          "detail": {
+            "type": "string"
+          },
+          "instance": {
+            "type": "string",
+            "description": "The request path"
+          },
+          "requestId": {
+            "type": "string",
+            "description": "For support requests"
+          }
+        },
+        "required": [
+          "type",
+          "title",
+          "status",
+          "requestId"
+        ],
+        "description": "Conflict. The entity already exists (for a permission: the camera already has the plate and country) or was changed at the same time. Read it again before deciding; a concurrent change is safe to retry."
+      },
+      "IdempotencyKeyInFlightProblem": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "https://developers.einargate.com/errors/idempotency-key-in-flight"
+            ]
+          },
+          "title": {
+            "type": "string",
+            "example": "Idempotency key in flight"
+          },
+          "status": {
+            "type": "number",
+            "enum": [
+              409
+            ]
+          },
+          "detail": {
+            "type": "string"
+          },
+          "instance": {
+            "type": "string",
+            "description": "The request path"
+          },
+          "requestId": {
+            "type": "string",
+            "description": "For support requests"
+          }
+        },
+        "required": [
+          "type",
+          "title",
+          "status",
+          "requestId"
+        ],
+        "description": "Idempotency key in flight. A request with the same `Idempotency-Key` is still running: wait a moment and retry with the same key."
+      },
+      "InvalidOwnerProblem": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "https://developers.einargate.com/errors/invalid-owner"
+            ]
+          },
+          "title": {
+            "type": "string",
+            "example": "Invalid owner"
+          },
+          "status": {
+            "type": "number",
+            "enum": [
+              422
+            ]
+          },
+          "detail": {
+            "type": "string"
+          },
+          "instance": {
+            "type": "string",
+            "description": "The request path"
+          },
+          "requestId": {
+            "type": "string",
+            "description": "For support requests"
+          }
+        },
+        "required": [
+          "type",
+          "title",
+          "status",
+          "requestId"
+        ],
+        "description": "Invalid owner. Set `ownerUserId` to the `userId` of a member whose status is `member` (`GET /locations/{locationId}/members`)."
+      },
+      "LimitExceededProblem": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "https://developers.einargate.com/errors/limit-exceeded"
+            ]
+          },
+          "title": {
+            "type": "string",
+            "example": "Limit exceeded"
+          },
+          "status": {
+            "type": "number",
+            "enum": [
+              422
+            ]
+          },
+          "detail": {
+            "type": "string"
+          },
+          "instance": {
+            "type": "string",
+            "description": "The request path"
+          },
+          "requestId": {
+            "type": "string",
+            "description": "For support requests"
+          }
+        },
+        "required": [
+          "type",
+          "title",
+          "status",
+          "requestId"
+        ],
+        "description": "Limit exceeded. A limit of the location’s plan or of the owner would be exceeded; the location’s `limits` show them. Remove permissions first, or ask the location Owner to change the plan."
+      },
+      "GateNotOperableProblem": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "https://developers.einargate.com/errors/gate-not-operable"
+            ]
+          },
+          "title": {
+            "type": "string",
+            "example": "Gate not operable"
+          },
+          "status": {
+            "type": "number",
+            "enum": [
+              422
+            ]
+          },
+          "detail": {
+            "type": "string"
+          },
+          "instance": {
+            "type": "string",
+            "description": "The request path"
+          },
+          "requestId": {
+            "type": "string",
+            "description": "For support requests"
+          }
+        },
+        "required": [
+          "type",
+          "title",
+          "status",
+          "requestId"
+        ],
+        "description": "Gate not operable. The gate cannot be opened now: it has no control camera, the camera is offline, or the gate is not set up for control. Check its `gateControlCameraId` and that camera’s `connection.status`."
+      },
+      "IdempotencyKeyReuseProblem": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "https://developers.einargate.com/errors/idempotency-key-reuse"
+            ]
+          },
+          "title": {
+            "type": "string",
+            "example": "Idempotency key reused"
+          },
+          "status": {
+            "type": "number",
+            "enum": [
+              422
+            ]
+          },
+          "detail": {
+            "type": "string"
+          },
+          "instance": {
+            "type": "string",
+            "description": "The request path"
+          },
+          "requestId": {
+            "type": "string",
+            "description": "For support requests"
+          }
+        },
+        "required": [
+          "type",
+          "title",
+          "status",
+          "requestId"
+        ],
+        "description": "Idempotency key reused. The `Idempotency-Key` was used for a different request in the last 24 hours: send a new request with a new key."
+      },
+      "RateLimitedProblem": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "https://developers.einargate.com/errors/rate-limited"
+            ]
+          },
+          "title": {
+            "type": "string",
+            "example": "Rate limit exceeded"
+          },
+          "status": {
+            "type": "number",
+            "enum": [
+              429
+            ]
+          },
+          "detail": {
+            "type": "string"
+          },
+          "instance": {
+            "type": "string",
+            "description": "The request path"
+          },
+          "requestId": {
+            "type": "string",
+            "description": "For support requests"
+          },
+          "window": {
+            "type": "string",
+            "enum": [
+              "second",
+              "day"
+            ]
+          }
+        },
+        "required": [
+          "type",
+          "title",
+          "status",
+          "requestId",
+          "window"
+        ],
+        "description": "Rate limit exceeded. Wait `Retry-After` seconds when `window` is `second`, or until the next day when it is `day`. Every API key of the location shares the limits that `GET /me` shows."
+      },
+      "InternalProblem": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "https://developers.einargate.com/errors/internal"
+            ]
+          },
+          "title": {
+            "type": "string",
+            "example": "Internal error"
+          },
+          "status": {
+            "type": "number",
+            "enum": [
+              500
+            ]
+          },
+          "detail": {
+            "type": "string"
+          },
+          "instance": {
+            "type": "string",
+            "description": "The request path"
+          },
+          "requestId": {
+            "type": "string",
+            "description": "For support requests"
+          }
+        },
+        "required": [
+          "type",
+          "title",
+          "status",
+          "requestId"
+        ],
+        "description": "Internal error. An unexpected error on our side. Retry later, and send the `requestId` to support if it persists. Before retrying a gate opening, check the events: the gate may have opened."
+      },
+      "ProvisioningProblem": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "https://developers.einargate.com/errors/provisioning"
+            ]
+          },
+          "title": {
+            "type": "string",
+            "example": "Provisioning in progress"
+          },
+          "status": {
+            "type": "number",
+            "enum": [
+              503
+            ]
+          },
+          "detail": {
+            "type": "string"
+          },
+          "instance": {
+            "type": "string",
+            "description": "The request path"
+          },
+          "requestId": {
+            "type": "string",
+            "description": "For support requests"
+          }
+        },
+        "required": [
+          "type",
+          "title",
+          "status",
+          "requestId"
+        ],
+        "description": "Provisioning in progress. The location’s first API key was created moments ago: retry after `Retry-After` seconds."
+      },
+      "ServiceUnavailableProblem": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "https://developers.einargate.com/errors/service-unavailable"
+            ]
+          },
+          "title": {
+            "type": "string",
+            "example": "Service unavailable"
+          },
+          "status": {
+            "type": "number",
+            "enum": [
+              503
+            ]
+          },
+          "detail": {
+            "type": "string"
+          },
+          "instance": {
+            "type": "string",
+            "description": "The request path"
+          },
+          "requestId": {
+            "type": "string",
+            "description": "For support requests"
+          }
+        },
+        "required": [
+          "type",
+          "title",
+          "status",
+          "requestId"
+        ],
+        "description": "Service unavailable. A dependency was briefly unavailable: send the same request again after a short wait, with the same `Idempotency-Key` for a write."
+      },
+      "RateLimit": {
+        "type": "object",
+        "properties": {
+          "requestsPerSecond": {
+            "type": "integer",
+            "description": "Sustained requests per second for the location"
+          },
+          "burst": {
+            "type": "integer",
+            "description": "Requests the location may send at once before throttling"
+          },
+          "requestsPerDay": {
+            "type": "integer",
+            "description": "Daily quota of the location; it resets at the start of each day"
+          }
+        },
+        "required": [
+          "requestsPerSecond",
+          "burst",
+          "requestsPerDay"
+        ],
+        "description": "The configured limits, shared by all API keys of the location. Live counters are not available."
+      },
+      "Me": {
+        "type": "object",
+        "properties": {
+          "apiKeyId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "locationId": {
+            "type": "string"
+          },
+          "roles": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "IntegrationSetupReader",
+                "IntegrationPermissionReader",
+                "IntegrationEventReader",
+                "IntegrationPermissionManager",
+                "IntegrationGateOperator"
+              ]
+            },
+            "description": "The roles the API key holds at its location"
+          },
+          "subscriptionActive": {
+            "type": "boolean",
+            "description": "Whether the location's subscription is active. Opening gates requires an active subscription."
+          },
+          "rateLimit": {
+            "$ref": "#/components/schemas/RateLimit"
+          },
+          "valueRetiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "ISO 8601 in UTC",
+            "example": "2026-09-12T10:41:07.000Z"
+          }
+        },
+        "required": [
+          "apiKeyId",
+          "name",
+          "locationId",
+          "roles",
+          "subscriptionActive",
+          "rateLimit"
+        ],
+        "description": "The calling API key"
+      },
+      "LocationLimits": {
+        "type": "object",
+        "properties": {
+          "maxUsers": {
+            "type": "integer"
+          },
+          "maxGates": {
+            "type": "integer"
+          },
+          "maxCamerasPerGate": {
+            "type": "integer"
+          },
+          "maxPlatesPerUser": {
+            "type": "integer"
+          },
+          "maxPlatesInPlan": {
+            "type": "integer"
+          },
+          "maxEventsWithAttachments": {
+            "type": "integer"
+          }
+        },
+        "description": "The location’s limits. A limit that is not set is the default of the location’s plan."
+      },
+      "Location": {
+        "type": "object",
+        "properties": {
+          "locationId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "address": {
+            "type": "string"
+          },
+          "timezone": {
+            "type": "string",
+            "description": "IANA time zone, e.g. `Europe/Budapest`"
+          },
+          "defaultLicensePlateCountry": {
+            "type": "string",
+            "description": "The country a permission gets when it is created without one"
+          },
+          "limits": {
+            "$ref": "#/components/schemas/LocationLimits"
+          },
+          "subscriptionActive": {
+            "type": "boolean",
+            "description": "Opening gates requires an active subscription"
+          },
+          "eventRetentionDays": {
+            "type": "integer",
+            "description": "How many days events are kept; not set when they are kept indefinitely"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "ISO 8601 in UTC",
+            "example": "2026-09-12T10:41:07.000Z"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "ISO 8601 in UTC",
+            "example": "2026-09-12T10:41:07.000Z"
+          }
+        },
+        "required": [
+          "locationId",
+          "name",
+          "address",
+          "limits",
+          "subscriptionActive",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "Member": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "description": "Set once the user has an account; a permission’s owner must be a member whose status is `member`"
+          },
+          "email": {
+            "type": "string"
+          },
+          "givenName": {
+            "type": "string"
+          },
+          "familyName": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "LocationOwner",
+              "LocationAdmin",
+              "LocationUser"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "invited",
+              "invitation_declined",
+              "acknowledged",
+              "member",
+              "deleting"
+            ],
+            "description": "Only a `member` can own permissions; the others are invitations in progress or a membership being removed"
+          }
+        },
+        "required": [
+          "email",
+          "role",
+          "status"
+        ],
+        "description": "A member or an invitee of the location"
+      },
+      "MemberPage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Member"
+            }
+          },
+          "continuationToken": {
+            "type": "string",
+            "description": "Present when there are more items: pass it to get them"
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "Gate": {
+        "type": "object",
+        "properties": {
+          "gateId": {
+            "type": "string"
+          },
+          "locationId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "manualOperation": {
+            "type": "boolean",
+            "description": "Whether any member of the location may open it in the app"
+          },
+          "gateControlCameraId": {
+            "type": "string",
+            "description": "The camera that opens the gate; a gate without one cannot be opened"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "ISO 8601 in UTC",
+            "example": "2026-09-12T10:41:07.000Z"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "ISO 8601 in UTC",
+            "example": "2026-09-12T10:41:07.000Z"
+          }
+        },
+        "required": [
+          "gateId",
+          "locationId",
+          "name",
+          "manualOperation",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "GatePage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Gate"
+            }
+          },
+          "continuationToken": {
+            "type": "string",
+            "description": "Present when there are more items: pass it to get them"
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "EventInitiator": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "user"
+                ]
+              },
+              "userId": {
+                "type": "string"
+              },
+              "displayName": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "type",
+              "userId",
+              "displayName"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "api-key"
+                ]
+              },
+              "apiKeyId": {
+                "type": "string"
+              },
+              "displayName": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "type",
+              "apiKeyId",
+              "displayName"
+            ]
+          }
+        ],
+        "description": "Manual openings only"
+      },
+      "Event": {
+        "type": "object",
+        "properties": {
+          "eventId": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "AutomaticGateOpening",
+              "ManualGateOpening"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "finalized",
+              "canceled",
+              "failed"
+            ],
+            "description": "A gate opening is `pending` until its data and images arrive"
+          },
+          "locationId": {
+            "type": "string"
+          },
+          "gateId": {
+            "type": "string"
+          },
+          "cameraId": {
+            "type": "string",
+            "description": "The camera that recognized the plate; not set on manual openings"
+          },
+          "eventTime": {
+            "type": "string",
+            "format": "date-time",
+            "description": "ISO 8601 in UTC",
+            "example": "2026-09-12T10:41:07.000Z"
+          },
+          "initiator": {
+            "$ref": "#/components/schemas/EventInitiator"
+          },
+          "plate": {
+            "type": "object",
+            "properties": {
+              "text": {
+                "type": "string"
+              },
+              "country": {
+                "type": "string"
+              },
+              "confidence": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "text",
+              "country",
+              "confidence"
+            ],
+            "description": "The recognized plate; automatic openings"
+          },
+          "vehicle": {
+            "type": "object",
+            "properties": {
+              "category": {
+                "type": "string"
+              },
+              "make": {
+                "type": "string"
+              },
+              "model": {
+                "type": "string"
+              },
+              "color": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "category",
+              "make",
+              "model",
+              "color"
+            ],
+            "description": "The recognized vehicle; automatic openings"
+          },
+          "direction": {
+            "type": "string"
+          },
+          "speed": {
+            "type": "number"
+          },
+          "fraudRiskPercentage": {
+            "type": "number"
+          },
+          "permission": {
+            "type": "object",
+            "properties": {
+              "permissionId": {
+                "type": "string"
+              },
+              "cameraId": {
+                "type": "string"
+              },
+              "ownerUserId": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "permissionId",
+              "cameraId",
+              "ownerUserId"
+            ],
+            "description": "The permission that let the vehicle in"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "ISO 8601 in UTC",
+            "example": "2026-09-12T10:41:07.000Z"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "ISO 8601 in UTC",
+            "example": "2026-09-12T10:41:07.000Z"
+          }
+        },
+        "required": [
+          "eventId",
+          "type",
+          "status",
+          "locationId",
+          "gateId",
+          "eventTime",
+          "createdAt",
+          "updatedAt"
+        ],
+        "description": "A gate opening"
+      },
+      "CameraConnection": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "online",
+              "offline"
+            ]
+          },
+          "disconnectedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When an offline camera was last connected, if known",
+            "example": "2026-09-12T10:41:07.000Z"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "Camera": {
+        "type": "object",
+        "properties": {
+          "cameraId": {
+            "type": "string"
+          },
+          "locationId": {
+            "type": "string"
+          },
+          "gateId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "initializing",
+              "active",
+              "deleting"
+            ],
+            "description": "The camera’s registration at the gate"
+          },
+          "connection": {
+            "$ref": "#/components/schemas/CameraConnection"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "ISO 8601 in UTC",
+            "example": "2026-09-12T10:41:07.000Z"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "ISO 8601 in UTC",
+            "example": "2026-09-12T10:41:07.000Z"
+          }
+        },
+        "required": [
+          "cameraId",
+          "locationId",
+          "gateId",
+          "name",
+          "status",
+          "connection",
+          "createdAt",
+          "updatedAt"
+        ],
+        "description": "A camera registered at a gate"
+      },
+      "CameraPage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Camera"
+            }
+          },
+          "continuationToken": {
+            "type": "string",
+            "description": "Present when there are more items: pass it to get them"
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "Permission": {
+        "type": "object",
+        "properties": {
+          "permissionId": {
+            "type": "string",
+            "description": "**Opaque: store it as it is and URL-encode it in paths.** Find a permission by plate with the `licensePlate` filter instead of building an id.",
+            "example": "ABC123|HU"
+          },
+          "locationId": {
+            "type": "string"
+          },
+          "gateId": {
+            "type": "string"
+          },
+          "cameraId": {
+            "type": "string"
+          },
+          "licensePlate": {
+            "type": "string",
+            "description": "Normalized",
+            "example": "ABC123"
+          },
+          "licensePlateCountry": {
+            "type": "string",
+            "description": "Upper-case; an empty string when the plate has no country",
+            "example": "HU"
+          },
+          "ownerUserId": {
+            "type": "string"
+          },
+          "active": {
+            "type": "boolean"
+          },
+          "supplementalInfo": {
+            "type": "string"
+          },
+          "numberOfOpenings": {
+            "type": "integer"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "ISO 8601 in UTC",
+            "example": "2026-09-12T10:41:07.000Z"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "ISO 8601 in UTC",
+            "example": "2026-09-12T10:41:07.000Z"
+          }
+        },
+        "required": [
+          "permissionId",
+          "locationId",
+          "gateId",
+          "cameraId",
+          "licensePlate",
+          "licensePlateCountry",
+          "ownerUserId",
+          "active",
+          "numberOfOpenings",
+          "createdAt",
+          "updatedAt"
+        ],
+        "description": "A plate’s permission on one camera. The owner’s private name and comment are never exposed."
+      },
+      "PermissionPage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Permission"
+            }
+          },
+          "continuationToken": {
+            "type": "string",
+            "description": "Present when there are more items: pass it to get them"
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "FailedCamera": {
+        "type": "object",
+        "properties": {
+          "cameraId": {
+            "type": "string"
+          },
+          "error": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/ConflictProblem"
+              },
+              {
+                "$ref": "#/components/schemas/LimitExceededProblem"
+              }
+            ],
+            "discriminator": {
+              "propertyName": "type",
+              "mapping": {
+                "https://developers.einargate.com/errors/conflict": "#/components/schemas/ConflictProblem",
+                "https://developers.einargate.com/errors/limit-exceeded": "#/components/schemas/LimitExceededProblem"
+              }
+            }
+          }
+        },
+        "required": [
+          "cameraId",
+          "error"
+        ],
+        "description": "A camera that did not get the permission: `conflict` when it already has one for the plate and country, `limit-exceeded` when a plate limit of the location or the owner would be exceeded"
+      },
+      "CreatePermissionResult": {
+        "type": "object",
+        "properties": {
+          "created": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Permission"
+            },
+            "minItems": 1,
+            "description": "Never empty: when no camera got it, the answer is a problem"
+          },
+          "failed": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FailedCamera"
+            }
+          }
+        },
+        "required": [
+          "created",
+          "failed"
+        ],
+        "description": "The permission as added to each camera that got it, and the cameras that did not"
+      },
+      "CreatePermission": {
+        "type": "object",
+        "properties": {
+          "licensePlate": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^[\\p{L}0-9 .,/\\p{Dash}]+$",
+            "description": "As typed; whitespace and dashes are removed",
+            "example": "ABC-123"
+          },
+          "licensePlateCountry": {
+            "type": "string",
+            "description": "The location’s `defaultLicensePlateCountry` when not given; an empty string for a plate without a country",
+            "example": "HU"
+          },
+          "ownerUserId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "A member of the location whose status is `member`; the plate counts against their limit"
+          },
+          "active": {
+            "type": "boolean"
+          },
+          "supplementalInfo": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          }
+        },
+        "required": [
+          "licensePlate",
+          "ownerUserId",
+          "active"
+        ],
+        "additionalProperties": false
+      },
+      "ReplacePermission": {
+        "type": "object",
+        "properties": {
+          "licensePlate": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^[\\p{L}0-9 .,/\\p{Dash}]+$",
+            "description": "As typed; changing it changes the `permissionId`, which the response returns"
+          },
+          "licensePlateCountry": {
+            "type": "string",
+            "description": "An empty string for a plate without a country"
+          },
+          "active": {
+            "type": "boolean"
+          },
+          "supplementalInfo": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Removed when not given"
+          }
+        },
+        "required": [
+          "licensePlate",
+          "licensePlateCountry",
+          "active"
+        ],
+        "additionalProperties": false,
+        "description": "The full representation of the permission’s fields an API key manages; a field that is not given is removed. The owner cannot be changed, and the owner’s private name and comment are kept."
+      },
+      "EventPage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Event"
+            }
+          },
+          "continuationToken": {
+            "type": "string",
+            "description": "Present when there are more items: pass it to get them"
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "EventAttachment": {
+        "type": "object",
+        "properties": {
+          "fileName": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string",
+            "description": "E.g. `Overview` or `Plate`"
+          },
+          "mediaType": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "requested",
+              "uploaded",
+              "error"
+            ],
+            "description": "A manual opening’s snapshot: requested from the camera, uploaded, or failed"
+          },
+          "url": {
+            "type": "string",
+            "description": "A presigned URL, valid for 15 minutes; set once the file is uploaded"
+          }
+        },
+        "required": [
+          "fileName",
+          "role",
+          "mediaType"
+        ]
+      },
+      "EventWithAttachments": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Event"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "attachments": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/EventAttachment"
+                }
+              }
+            },
+            "required": [
+              "attachments"
+            ]
+          }
+        ],
+        "description": "A gate opening with its images"
+      }
+    },
+    "parameters": {}
+  },
+  "paths": {
+    "/me": {
+      "get": {
+        "operationId": "getMe",
+        "tags": [
+          "API key"
+        ],
+        "summary": "The calling API key",
+        "description": "The API key the calling value belongs to: its roles, the subscription state of its location and the configured rate limits. Every authenticated API key may call it; check it when a request is answered with `forbidden`.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-einargate-roles": [
+          "IntegrationSetupReader",
+          "IntegrationPermissionReader",
+          "IntegrationEventReader",
+          "IntegrationPermissionManager",
+          "IntegrationGateOperator"
+        ],
+        "responses": {
+          "200": {
+            "description": "The calling API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Me"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedProblem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenProblem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying; sent when the per-second limit was hit",
+                "schema": {
+                  "type": "integer"
+                },
+                "required": false
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedProblem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalProblem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Provisioning in progress; Service unavailable",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying; sent while the location is provisioned",
+                "schema": {
+                  "type": "integer"
+                },
+                "required": false
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/ProvisioningProblem"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ServiceUnavailableProblem"
+                    }
+                  ],
+                  "discriminator": {
+                    "propertyName": "type",
+                    "mapping": {
+                      "https://developers.einargate.com/errors/provisioning": "#/components/schemas/ProvisioningProblem",
+                      "https://developers.einargate.com/errors/service-unavailable": "#/components/schemas/ServiceUnavailableProblem"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/openapi.json": {
+      "get": {
+        "operationId": "getOpenApiDocument",
+        "tags": [
+          "Contract"
+        ],
+        "summary": "This OpenAPI document",
+        "description": "The OpenAPI 3.1 document of v1. No authentication needed.",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "The OpenAPI document",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {},
+                  "description": "The OpenAPI 3.1 document of this API version"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying; sent when the per-second limit was hit",
+                "schema": {
+                  "type": "integer"
+                },
+                "required": false
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedProblem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalProblem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceUnavailableProblem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/locations/{locationId}": {
+      "get": {
+        "operationId": "getLocation",
+        "tags": [
+          "Location"
+        ],
+        "summary": "The location",
+        "description": "The API key’s location: its address, time zone, default plate country, limits, subscription state and event retention.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-einargate-roles": [
+          "IntegrationSetupReader",
+          "IntegrationEventReader"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The location; always the API key’s own"
+            },
+            "required": true,
+            "name": "locationId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The location",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Location"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestProblem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedProblem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenProblem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundProblem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying; sent when the per-second limit was hit",
+                "schema": {
+                  "type": "integer"
+                },
+                "required": false
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedProblem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalProblem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Provisioning in progress; Service unavailable",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying; sent while the location is provisioned",
+                "schema": {
+                  "type": "integer"
+                },
+                "required": false
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/ProvisioningProblem"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ServiceUnavailableProblem"
+                    }
+                  ],
+                  "discriminator": {
+                    "propertyName": "type",
+                    "mapping": {
+                      "https://developers.einargate.com/errors/provisioning": "#/components/schemas/ProvisioningProblem",
+                      "https://developers.einargate.com/errors/service-unavailable": "#/components/schemas/ServiceUnavailableProblem"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/locations/{locationId}/members": {
+      "get": {
+        "operationId": "listMembers",
+        "tags": [
+          "Location"
+        ],
+        "summary": "The location’s members",
+        "description": "Members and invitees, sorted by name. A permission’s owner is a member whose status is `member`.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-einargate-roles": [
+          "IntegrationPermissionReader",
+          "IntegrationPermissionManager"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The location; always the API key’s own"
+            },
+            "required": true,
+            "name": "locationId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50,
+              "description": "Items per page, 1 to 200"
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The `continuationToken` of the previous page, to get the next one"
+            },
+            "required": false,
+            "name": "continuationToken",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of members",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemberPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestProblem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedProblem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenProblem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundProblem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying; sent when the per-second limit was hit",
+                "schema": {
+                  "type": "integer"
+                },
+                "required": false
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedProblem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalProblem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Provisioning in progress; Service unavailable",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying; sent while the location is provisioned",
+                "schema": {
+                  "type": "integer"
+                },
+                "required": false
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/ProvisioningProblem"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ServiceUnavailableProblem"
+                    }
+                  ],
+                  "discriminator": {
+                    "propertyName": "type",
+                    "mapping": {
+                      "https://developers.einargate.com/errors/provisioning": "#/components/schemas/ProvisioningProblem",
+                      "https://developers.einargate.com/errors/service-unavailable": "#/components/schemas/ServiceUnavailableProblem"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/locations/{locationId}/gates": {
+      "get": {
+        "operationId": "listGates",
+        "tags": [
+          "Gates"
+        ],
+        "summary": "The location’s gates",
+        "description": "Sorted by name.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-einargate-roles": [
+          "IntegrationSetupReader",
+          "IntegrationPermissionReader",
+          "IntegrationEventReader",
+          "IntegrationPermissionManager",
+          "IntegrationGateOperator"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The location; always the API key’s own"
+            },
+            "required": true,
+            "name": "locationId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50,
+              "description": "Items per page, 1 to 200"
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The `continuationToken` of the previous page, to get the next one"
+            },
+            "required": false,
+            "name": "continuationToken",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of gates",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GatePage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestProblem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedProblem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenProblem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying; sent when the per-second limit was hit",
+                "schema": {
+                  "type": "integer"
+                },
+                "required": false
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedProblem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalProblem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Provisioning in progress; Service unavailable",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying; sent while the location is provisioned",
+                "schema": {
+                  "type": "integer"
+                },
+                "required": false
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/ProvisioningProblem"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ServiceUnavailableProblem"
+                    }
+                  ],
+                  "discriminator": {
+                    "propertyName": "type",
+                    "mapping": {
+                      "https://developers.einargate.com/errors/provisioning": "#/components/schemas/ProvisioningProblem",
+                      "https://developers.einargate.com/errors/service-unavailable": "#/components/schemas/ServiceUnavailableProblem"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/locations/{locationId}/gates/{gateId}": {
+      "get": {
+        "operationId": "getGate",
+        "tags": [
+          "Gates"
+        ],
+        "summary": "A gate",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-einargate-roles": [
+          "IntegrationSetupReader",
+          "IntegrationPermissionReader",
+          "IntegrationEventReader",
+          "IntegrationPermissionManager",
+          "IntegrationGateOperator"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The location; always the API key’s own"
+            },
+            "required": true,
+            "name": "locationId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "A gate of the location"
+            },
+            "required": true,
+            "name": "gateId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The gate",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Gate"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestProblem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedProblem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenProblem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundProblem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying; sent when the per-second limit was hit",
+                "schema": {
+                  "type": "integer"
+                },
+                "required": false
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedProblem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalProblem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Provisioning in progress; Service unavailable",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying; sent while the location is provisioned",
+                "schema": {
+                  "type": "integer"
+                },
+                "required": false
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/ProvisioningProblem"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ServiceUnavailableProblem"
+                    }
+                  ],
+                  "discriminator": {
+                    "propertyName": "type",
+                    "mapping": {
+                      "https://developers.einargate.com/errors/provisioning": "#/components/schemas/ProvisioningProblem",
+                      "https://developers.einargate.com/errors/service-unavailable": "#/components/schemas/ServiceUnavailableProblem"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/locations/{locationId}/gates/{gateId}/open": {
+      "post": {
+        "operationId": "openGate",
+        "tags": [
+          "Gates"
+        ],
+        "summary": "Open a gate",
+        "description": "Sends the open command to the gate’s control camera and answers the manual opening event while it is still pending: its snapshots are requested from the gate’s cameras, and `GET /events/{eventId}` shows them once they arrive. Requires an active subscription. No body. Send an `Idempotency-Key` so that a retry does not open the gate twice.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-einargate-roles": [
+          "IntegrationGateOperator"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The location; always the API key’s own"
+            },
+            "required": true,
+            "name": "locationId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "A gate of the location"
+            },
+            "required": true,
+            "name": "gateId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255,
+              "description": "Makes the request idempotent for 24 hours: a retry with the same key and request replays the first response."
+            },
+            "required": false,
+            "name": "Idempotency-Key",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "The open command was sent; the pending opening event",
+            "headers": {
+              "Idempotent-Replayed": {
+                "description": "`true` when the response is the stored response of an earlier request with the same `Idempotency-Key`",
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "true"
+                  ]
+                },
+                "required": false
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Event"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestProblem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedProblem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenProblem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundProblem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Idempotency key in flight",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IdempotencyKeyInFlightProblem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Gate not operable; Idempotency key reused",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/GateNotOperableProblem"
+                    },
+                    {
+                      "$ref": "#/components/schemas/IdempotencyKeyReuseProblem"
+                    }
+                  ],
+                  "discriminator": {
+                    "propertyName": "type",
+                    "mapping": {
+                      "https://developers.einargate.com/errors/gate-not-operable": "#/components/schemas/GateNotOperableProblem",
+                      "https://developers.einargate.com/errors/idempotency-key-reuse": "#/components/schemas/IdempotencyKeyReuseProblem"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying; sent when the per-second limit was hit",
+                "schema": {
+                  "type": "integer"
+                },
+                "required": false
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedProblem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalProblem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Provisioning in progress; Service unavailable",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying; sent while the location is provisioned",
+                "schema": {
+                  "type": "integer"
+                },
+                "required": false
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/ProvisioningProblem"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ServiceUnavailableProblem"
+                    }
+                  ],
+                  "discriminator": {
+                    "propertyName": "type",
+                    "mapping": {
+                      "https://developers.einargate.com/errors/provisioning": "#/components/schemas/ProvisioningProblem",
+                      "https://developers.einargate.com/errors/service-unavailable": "#/components/schemas/ServiceUnavailableProblem"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/locations/{locationId}/cameras": {
+      "get": {
+        "operationId": "listLocationCameras",
+        "tags": [
+          "Cameras"
+        ],
+        "summary": "The cameras of the location",
+        "description": "Every camera registered at a gate of the location, with its connection status.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-einargate-roles": [
+          "IntegrationSetupReader",
+          "IntegrationPermissionReader",
+          "IntegrationEventReader",
+          "IntegrationPermissionManager"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The location; always the API key’s own"
+            },
+            "required": true,
+            "name": "locationId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50,
+              "description": "Items per page, 1 to 200"
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The `continuationToken` of the previous page, to get the next one"
+            },
+            "required": false,
+            "name": "continuationToken",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of cameras",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CameraPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestProblem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedProblem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenProblem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundProblem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying; sent when the per-second limit was hit",
+                "schema": {
+                  "type": "integer"
+                },
+                "required": false
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedProblem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalProblem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Provisioning in progress; Service unavailable",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying; sent while the location is provisioned",
+                "schema": {
+                  "type": "integer"
+                },
+                "required": false
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/ProvisioningProblem"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ServiceUnavailableProblem"
+                    }
+                  ],
+                  "discriminator": {
+                    "propertyName": "type",
+                    "mapping": {
+                      "https://developers.einargate.com/errors/provisioning": "#/components/schemas/ProvisioningProblem",
+                      "https://developers.einargate.com/errors/service-unavailable": "#/components/schemas/ServiceUnavailableProblem"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/locations/{locationId}/gates/{gateId}/cameras": {
+      "get": {
+        "operationId": "listGateCameras",
+        "tags": [
+          "Cameras"
+        ],
+        "summary": "The cameras of a gate",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-einargate-roles": [
+          "IntegrationSetupReader",
+          "IntegrationPermissionReader",
+          "IntegrationEventReader",
+          "IntegrationPermissionManager"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The location; always the API key’s own"
+            },
+            "required": true,
+            "name": "locationId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "A gate of the location"
+            },
+            "required": true,
+            "name": "gateId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50,
+              "description": "Items per page, 1 to 200"
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The `continuationToken` of the previous page, to get the next one"
+            },
+            "required": false,
+            "name": "continuationToken",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of cameras",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CameraPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestProblem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedProblem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenProblem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundProblem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying; sent when the per-second limit was hit",
+                "schema": {
+                  "type": "integer"
+                },
+                "required": false
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedProblem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalProblem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Provisioning in progress; Service unavailable",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying; sent while the location is provisioned",
+                "schema": {
+                  "type": "integer"
+                },
+                "required": false
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/ProvisioningProblem"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ServiceUnavailableProblem"
+                    }
+                  ],
+                  "discriminator": {
+                    "propertyName": "type",
+                    "mapping": {
+                      "https://developers.einargate.com/errors/provisioning": "#/components/schemas/ProvisioningProblem",
+                      "https://developers.einargate.com/errors/service-unavailable": "#/components/schemas/ServiceUnavailableProblem"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/locations/{locationId}/gates/{gateId}/cameras/{cameraId}": {
+      "get": {
+        "operationId": "getCamera",
+        "tags": [
+          "Cameras"
+        ],
+        "summary": "A camera of a gate",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-einargate-roles": [
+          "IntegrationSetupReader",
+          "IntegrationPermissionReader",
+          "IntegrationEventReader",
+          "IntegrationPermissionManager"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The location; always the API key’s own"
+            },
+            "required": true,
+            "name": "locationId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "A gate of the location"
+            },
+            "required": true,
+            "name": "gateId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "A camera of the gate"
+            },
+            "required": true,
+            "name": "cameraId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The camera",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Camera"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestProblem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedProblem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenProblem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundProblem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying; sent when the per-second limit was hit",
+                "schema": {
+                  "type": "integer"
+                },
+                "required": false
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedProblem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalProblem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Provisioning in progress; Service unavailable",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying; sent while the location is provisioned",
+                "schema": {
+                  "type": "integer"
+                },
+                "required": false
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/ProvisioningProblem"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ServiceUnavailableProblem"
+                    }
+                  ],
+                  "discriminator": {
+                    "propertyName": "type",
+                    "mapping": {
+                      "https://developers.einargate.com/errors/provisioning": "#/components/schemas/ProvisioningProblem",
+                      "https://developers.einargate.com/errors/service-unavailable": "#/components/schemas/ServiceUnavailableProblem"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/locations/{locationId}/permissions": {
+      "get": {
+        "operationId": "listPermissions",
+        "tags": [
+          "Permissions"
+        ],
+        "summary": "The location’s permissions",
+        "description": "One item per camera: a plate permitted at a gate with two cameras is listed twice. To find a plate’s permissions, filter by `licensePlate` (and `licensePlateCountry`) rather than building ids.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-einargate-roles": [
+          "IntegrationPermissionReader",
+          "IntegrationPermissionManager"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The location; always the API key’s own"
+            },
+            "required": true,
+            "name": "locationId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": false,
+            "name": "gateId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Requires `gateId`"
+            },
+            "required": false,
+            "name": "cameraId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": false,
+            "name": "ownerUserId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
+            },
+            "required": false,
+            "name": "active",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "^[\\p{L}0-9 .,/\\p{Dash}]+$",
+              "description": "Exact match on the plate, which is normalized as on create (`abc-123` finds `ABC123`)"
+            },
+            "required": false,
+            "name": "licensePlate",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Exact match on the country. A plate without a country is found by `licensePlate` alone: its `licensePlateCountry` is empty."
+            },
+            "required": false,
+            "name": "licensePlateCountry",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Matches part of the plate or of the supplemental info"
+            },
+            "required": false,
+            "name": "search",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50,
+              "description": "Items per page, 1 to 200"
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The `continuationToken` of the previous page, to get the next one"
+            },
+            "required": false,
+            "name": "continuationToken",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of permissions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PermissionPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestProblem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedProblem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenProblem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying; sent when the per-second limit was hit",
+                "schema": {
+                  "type": "integer"
+                },
+                "required": false
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedProblem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalProblem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Provisioning in progress; Service unavailable",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying; sent while the location is provisioned",
+                "schema": {
+                  "type": "integer"
+                },
+                "required": false
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/ProvisioningProblem"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ServiceUnavailableProblem"
+                    }
+                  ],
+                  "discriminator": {
+                    "propertyName": "type",
+                    "mapping": {
+                      "https://developers.einargate.com/errors/provisioning": "#/components/schemas/ProvisioningProblem",
+                      "https://developers.einargate.com/errors/service-unavailable": "#/components/schemas/ServiceUnavailableProblem"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "createLocationPermission",
+        "tags": [
+          "Permissions"
+        ],
+        "summary": "Permit a plate at every camera of the location",
+        "description": "The plate is added camera by camera. The answer is `201` when at least one camera got it, listing the cameras that did not with a problem each (`conflict`: it already has the plate; `limit-exceeded`: a plate limit would be exceeded). When no camera got it, the answer is that problem: `conflict` if every camera already has the plate, `limit-exceeded` otherwise. The owner must be a member whose status is `member` (`invalid-owner`). Send an `Idempotency-Key` to retry safely.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-einargate-roles": [
+          "IntegrationPermissionManager"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The location; always the API key’s own"
+            },
+            "required": true,
+            "name": "locationId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255,
+              "description": "Makes the request idempotent for 24 hours: a retry with the same key and request replays the first response."
+            },
+            "required": false,
+            "name": "Idempotency-Key",
+            "in": "header"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePermission"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Added to at least one camera",
+            "headers": {
+              "Idempotent-Replayed": {
+                "description": "`true` when the response is the stored response of an earlier request with the same `Idempotency-Key`",
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "true"
+                  ]
+                },
+                "required": false
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreatePermissionResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestProblem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedProblem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenProblem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundProblem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict; Idempotency key in flight",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/ConflictProblem"
+                    },
+                    {
+                      "$ref": "#/components/schemas/IdempotencyKeyInFlightProblem"
+                    }
+                  ],
+                  "discriminator": {
+                    "propertyName": "type",
+                    "mapping": {
+                      "https://developers.einargate.com/errors/conflict": "#/components/schemas/ConflictProblem",
+                      "https://developers.einargate.com/errors/idempotency-key-in-flight": "#/components/schemas/IdempotencyKeyInFlightProblem"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Idempotency key reused; Invalid owner; Limit exceeded",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/IdempotencyKeyReuseProblem"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InvalidOwnerProblem"
+                    },
+                    {
+                      "$ref": "#/components/schemas/LimitExceededProblem"
+                    }
+                  ],
+                  "discriminator": {
+                    "propertyName": "type",
+                    "mapping": {
+                      "https://developers.einargate.com/errors/idempotency-key-reuse": "#/components/schemas/IdempotencyKeyReuseProblem",
+                      "https://developers.einargate.com/errors/invalid-owner": "#/components/schemas/InvalidOwnerProblem",
+                      "https://developers.einargate.com/errors/limit-exceeded": "#/components/schemas/LimitExceededProblem"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying; sent when the per-second limit was hit",
+                "schema": {
+                  "type": "integer"
+                },
+                "required": false
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedProblem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalProblem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Provisioning in progress; Service unavailable",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying; sent while the location is provisioned",
+                "schema": {
+                  "type": "integer"
+                },
+                "required": false
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/ProvisioningProblem"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ServiceUnavailableProblem"
+                    }
+                  ],
+                  "discriminator": {
+                    "propertyName": "type",
+                    "mapping": {
+                      "https://developers.einargate.com/errors/provisioning": "#/components/schemas/ProvisioningProblem",
+                      "https://developers.einargate.com/errors/service-unavailable": "#/components/schemas/ServiceUnavailableProblem"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/locations/{locationId}/gates/{gateId}/permissions": {
+      "post": {
+        "operationId": "createGatePermission",
+        "tags": [
+          "Permissions"
+        ],
+        "summary": "Permit a plate at every camera of a gate",
+        "description": "The plate is added camera by camera. The answer is `201` when at least one camera got it, listing the cameras that did not with a problem each (`conflict`: it already has the plate; `limit-exceeded`: a plate limit would be exceeded). When no camera got it, the answer is that problem: `conflict` if every camera already has the plate, `limit-exceeded` otherwise. The owner must be a member whose status is `member` (`invalid-owner`). Send an `Idempotency-Key` to retry safely.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-einargate-roles": [
+          "IntegrationPermissionManager"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The location; always the API key’s own"
+            },
+            "required": true,
+            "name": "locationId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "A gate of the location"
+            },
+            "required": true,
+            "name": "gateId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255,
+              "description": "Makes the request idempotent for 24 hours: a retry with the same key and request replays the first response."
+            },
+            "required": false,
+            "name": "Idempotency-Key",
+            "in": "header"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePermission"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Added to at least one camera",
+            "headers": {
+              "Idempotent-Replayed": {
+                "description": "`true` when the response is the stored response of an earlier request with the same `Idempotency-Key`",
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "true"
+                  ]
+                },
+                "required": false
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreatePermissionResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestProblem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedProblem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenProblem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundProblem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict; Idempotency key in flight",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/ConflictProblem"
+                    },
+                    {
+                      "$ref": "#/components/schemas/IdempotencyKeyInFlightProblem"
+                    }
+                  ],
+                  "discriminator": {
+                    "propertyName": "type",
+                    "mapping": {
+                      "https://developers.einargate.com/errors/conflict": "#/components/schemas/ConflictProblem",
+                      "https://developers.einargate.com/errors/idempotency-key-in-flight": "#/components/schemas/IdempotencyKeyInFlightProblem"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Idempotency key reused; Invalid owner; Limit exceeded",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/IdempotencyKeyReuseProblem"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InvalidOwnerProblem"
+                    },
+                    {
+                      "$ref": "#/components/schemas/LimitExceededProblem"
+                    }
+                  ],
+                  "discriminator": {
+                    "propertyName": "type",
+                    "mapping": {
+                      "https://developers.einargate.com/errors/idempotency-key-reuse": "#/components/schemas/IdempotencyKeyReuseProblem",
+                      "https://developers.einargate.com/errors/invalid-owner": "#/components/schemas/InvalidOwnerProblem",
+                      "https://developers.einargate.com/errors/limit-exceeded": "#/components/schemas/LimitExceededProblem"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying; sent when the per-second limit was hit",
+                "schema": {
+                  "type": "integer"
+                },
+                "required": false
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedProblem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalProblem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Provisioning in progress; Service unavailable",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying; sent while the location is provisioned",
+                "schema": {
+                  "type": "integer"
+                },
+                "required": false
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/ProvisioningProblem"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ServiceUnavailableProblem"
+                    }
+                  ],
+                  "discriminator": {
+                    "propertyName": "type",
+                    "mapping": {
+                      "https://developers.einargate.com/errors/provisioning": "#/components/schemas/ProvisioningProblem",
+                      "https://developers.einargate.com/errors/service-unavailable": "#/components/schemas/ServiceUnavailableProblem"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/locations/{locationId}/gates/{gateId}/cameras/{cameraId}/permissions": {
+      "post": {
+        "operationId": "createCameraPermission",
+        "tags": [
+          "Permissions"
+        ],
+        "summary": "Permit a plate at one camera",
+        "description": "The plate is added camera by camera. The answer is `201` when at least one camera got it, listing the cameras that did not with a problem each (`conflict`: it already has the plate; `limit-exceeded`: a plate limit would be exceeded). When no camera got it, the answer is that problem: `conflict` if every camera already has the plate, `limit-exceeded` otherwise. The owner must be a member whose status is `member` (`invalid-owner`). Send an `Idempotency-Key` to retry safely.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-einargate-roles": [
+          "IntegrationPermissionManager"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The location; always the API key’s own"
+            },
+            "required": true,
+            "name": "locationId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "A gate of the location"
+            },
+            "required": true,
+            "name": "gateId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "A camera of the gate"
+            },
+            "required": true,
+            "name": "cameraId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255,
+              "description": "Makes the request idempotent for 24 hours: a retry with the same key and request replays the first response."
+            },
+            "required": false,
+            "name": "Idempotency-Key",
+            "in": "header"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePermission"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Added to the camera",
+            "headers": {
+              "Idempotent-Replayed": {
+                "description": "`true` when the response is the stored response of an earlier request with the same `Idempotency-Key`",
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "true"
+                  ]
+                },
+                "required": false
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreatePermissionResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestProblem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedProblem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenProblem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundProblem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict; Idempotency key in flight",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/ConflictProblem"
+                    },
+                    {
+                      "$ref": "#/components/schemas/IdempotencyKeyInFlightProblem"
+                    }
+                  ],
+                  "discriminator": {
+                    "propertyName": "type",
+                    "mapping": {
+                      "https://developers.einargate.com/errors/conflict": "#/components/schemas/ConflictProblem",
+                      "https://developers.einargate.com/errors/idempotency-key-in-flight": "#/components/schemas/IdempotencyKeyInFlightProblem"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Idempotency key reused; Invalid owner; Limit exceeded",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/IdempotencyKeyReuseProblem"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InvalidOwnerProblem"
+                    },
+                    {
+                      "$ref": "#/components/schemas/LimitExceededProblem"
+                    }
+                  ],
+                  "discriminator": {
+                    "propertyName": "type",
+                    "mapping": {
+                      "https://developers.einargate.com/errors/idempotency-key-reuse": "#/components/schemas/IdempotencyKeyReuseProblem",
+                      "https://developers.einargate.com/errors/invalid-owner": "#/components/schemas/InvalidOwnerProblem",
+                      "https://developers.einargate.com/errors/limit-exceeded": "#/components/schemas/LimitExceededProblem"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying; sent when the per-second limit was hit",
+                "schema": {
+                  "type": "integer"
+                },
+                "required": false
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedProblem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalProblem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Provisioning in progress; Service unavailable",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying; sent while the location is provisioned",
+                "schema": {
+                  "type": "integer"
+                },
+                "required": false
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/ProvisioningProblem"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ServiceUnavailableProblem"
+                    }
+                  ],
+                  "discriminator": {
+                    "propertyName": "type",
+                    "mapping": {
+                      "https://developers.einargate.com/errors/provisioning": "#/components/schemas/ProvisioningProblem",
+                      "https://developers.einargate.com/errors/service-unavailable": "#/components/schemas/ServiceUnavailableProblem"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/locations/{locationId}/gates/{gateId}/cameras/{cameraId}/permissions/{permissionId}": {
+      "get": {
+        "operationId": "getPermission",
+        "tags": [
+          "Permissions"
+        ],
+        "summary": "A permission of a camera",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-einargate-roles": [
+          "IntegrationPermissionReader",
+          "IntegrationPermissionManager"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The location; always the API key’s own"
+            },
+            "required": true,
+            "name": "locationId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "A gate of the location"
+            },
+            "required": true,
+            "name": "gateId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "A camera of the gate"
+            },
+            "required": true,
+            "name": "cameraId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "**An opaque id: URL-encode it, and never build one from a plate.** Returned by every permission response."
+            },
+            "required": true,
+            "name": "permissionId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The permission",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Permission"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestProblem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedProblem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenProblem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundProblem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying; sent when the per-second limit was hit",
+                "schema": {
+                  "type": "integer"
+                },
+                "required": false
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedProblem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalProblem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Provisioning in progress; Service unavailable",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying; sent while the location is provisioned",
+                "schema": {
+                  "type": "integer"
+                },
+                "required": false
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/ProvisioningProblem"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ServiceUnavailableProblem"
+                    }
+                  ],
+                  "discriminator": {
+                    "propertyName": "type",
+                    "mapping": {
+                      "https://developers.einargate.com/errors/provisioning": "#/components/schemas/ProvisioningProblem",
+                      "https://developers.einargate.com/errors/service-unavailable": "#/components/schemas/ServiceUnavailableProblem"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "replacePermission",
+        "tags": [
+          "Permissions"
+        ],
+        "summary": "Replace a permission of a camera",
+        "description": "Send the full representation: a field that is not given is removed. Changing the plate or country changes the `permissionId`; the response carries the new one. The owner cannot be changed: remove the permission and create it for the new owner.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-einargate-roles": [
+          "IntegrationPermissionManager"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The location; always the API key’s own"
+            },
+            "required": true,
+            "name": "locationId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "A gate of the location"
+            },
+            "required": true,
+            "name": "gateId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "A camera of the gate"
+            },
+            "required": true,
+            "name": "cameraId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "**An opaque id: URL-encode it, and never build one from a plate.** Returned by every permission response."
+            },
+            "required": true,
+            "name": "permissionId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255,
+              "description": "Makes the request idempotent for 24 hours: a retry with the same key and request replays the first response."
+            },
+            "required": false,
+            "name": "Idempotency-Key",
+            "in": "header"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReplacePermission"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The permission as it is now",
+            "headers": {
+              "Idempotent-Replayed": {
+                "description": "`true` when the response is the stored response of an earlier request with the same `Idempotency-Key`",
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "true"
+                  ]
+                },
+                "required": false
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Permission"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestProblem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedProblem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenProblem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundProblem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict; Idempotency key in flight",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/ConflictProblem"
+                    },
+                    {
+                      "$ref": "#/components/schemas/IdempotencyKeyInFlightProblem"
+                    }
+                  ],
+                  "discriminator": {
+                    "propertyName": "type",
+                    "mapping": {
+                      "https://developers.einargate.com/errors/conflict": "#/components/schemas/ConflictProblem",
+                      "https://developers.einargate.com/errors/idempotency-key-in-flight": "#/components/schemas/IdempotencyKeyInFlightProblem"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Idempotency key reused",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IdempotencyKeyReuseProblem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying; sent when the per-second limit was hit",
+                "schema": {
+                  "type": "integer"
+                },
+                "required": false
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedProblem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalProblem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Provisioning in progress; Service unavailable",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying; sent while the location is provisioned",
+                "schema": {
+                  "type": "integer"
+                },
+                "required": false
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/ProvisioningProblem"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ServiceUnavailableProblem"
+                    }
+                  ],
+                  "discriminator": {
+                    "propertyName": "type",
+                    "mapping": {
+                      "https://developers.einargate.com/errors/provisioning": "#/components/schemas/ProvisioningProblem",
+                      "https://developers.einargate.com/errors/service-unavailable": "#/components/schemas/ServiceUnavailableProblem"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deletePermission",
+        "tags": [
+          "Permissions"
+        ],
+        "summary": "Remove a permission from a camera",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-einargate-roles": [
+          "IntegrationPermissionManager"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The location; always the API key’s own"
+            },
+            "required": true,
+            "name": "locationId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "A gate of the location"
+            },
+            "required": true,
+            "name": "gateId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "A camera of the gate"
+            },
+            "required": true,
+            "name": "cameraId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "**An opaque id: URL-encode it, and never build one from a plate.** Returned by every permission response."
+            },
+            "required": true,
+            "name": "permissionId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255,
+              "description": "Makes the request idempotent for 24 hours: a retry with the same key and request replays the first response."
+            },
+            "required": false,
+            "name": "Idempotency-Key",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Removed",
+            "headers": {
+              "Idempotent-Replayed": {
+                "description": "`true` when the response is the stored response of an earlier request with the same `Idempotency-Key`",
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "true"
+                  ]
+                },
+                "required": false
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestProblem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedProblem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenProblem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundProblem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Idempotency key in flight",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IdempotencyKeyInFlightProblem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Idempotency key reused",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IdempotencyKeyReuseProblem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying; sent when the per-second limit was hit",
+                "schema": {
+                  "type": "integer"
+                },
+                "required": false
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedProblem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalProblem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Provisioning in progress; Service unavailable",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying; sent while the location is provisioned",
+                "schema": {
+                  "type": "integer"
+                },
+                "required": false
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/ProvisioningProblem"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ServiceUnavailableProblem"
+                    }
+                  ],
+                  "discriminator": {
+                    "propertyName": "type",
+                    "mapping": {
+                      "https://developers.einargate.com/errors/provisioning": "#/components/schemas/ProvisioningProblem",
+                      "https://developers.einargate.com/errors/service-unavailable": "#/components/schemas/ServiceUnavailableProblem"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/locations/{locationId}/events": {
+      "get": {
+        "operationId": "listEvents",
+        "tags": [
+          "Events"
+        ],
+        "summary": "The location’s gate openings",
+        "description": "Oldest first, within the location’s event retention. To follow new events, pass the last event time seen as `from`. The list carries no images: get an event for its attachments.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-einargate-roles": [
+          "IntegrationEventReader"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The location; always the API key’s own"
+            },
+            "required": true,
+            "name": "locationId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "description": "Events at or after this time; ISO 8601, offsets allowed"
+            },
+            "required": false,
+            "name": "from",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "description": "Events at or before this time; ISO 8601, offsets allowed"
+            },
+            "required": false,
+            "name": "to",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": false,
+            "name": "gateId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": false,
+            "name": "cameraId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "AutomaticGateOpening",
+                "ManualGateOpening"
+              ]
+            },
+            "required": false,
+            "name": "type",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Exact match on the recognized plate"
+            },
+            "required": false,
+            "name": "licensePlate",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "required": false,
+            "name": "minFraudRiskPercentage",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50,
+              "description": "Items per page, 1 to 200"
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The `continuationToken` of the previous page, to get the next one"
+            },
+            "required": false,
+            "name": "continuationToken",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of events",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestProblem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedProblem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenProblem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundProblem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying; sent when the per-second limit was hit",
+                "schema": {
+                  "type": "integer"
+                },
+                "required": false
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedProblem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalProblem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Provisioning in progress; Service unavailable",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying; sent while the location is provisioned",
+                "schema": {
+                  "type": "integer"
+                },
+                "required": false
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/ProvisioningProblem"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ServiceUnavailableProblem"
+                    }
+                  ],
+                  "discriminator": {
+                    "propertyName": "type",
+                    "mapping": {
+                      "https://developers.einargate.com/errors/provisioning": "#/components/schemas/ProvisioningProblem",
+                      "https://developers.einargate.com/errors/service-unavailable": "#/components/schemas/ServiceUnavailableProblem"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/locations/{locationId}/events/{eventId}": {
+      "get": {
+        "operationId": "getEvent",
+        "tags": [
+          "Events"
+        ],
+        "summary": "A gate opening with its images",
+        "description": "The attachments’ URLs are presigned and valid for 15 minutes; get the event again for fresh ones.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-einargate-roles": [
+          "IntegrationEventReader"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The location; always the API key’s own"
+            },
+            "required": true,
+            "name": "locationId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "An event of the location"
+            },
+            "required": true,
+            "name": "eventId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The event",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventWithAttachments"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestProblem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedProblem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenProblem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundProblem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying; sent when the per-second limit was hit",
+                "schema": {
+                  "type": "integer"
+                },
+                "required": false
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedProblem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalProblem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Provisioning in progress; Service unavailable",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying; sent while the location is provisioned",
+                "schema": {
+                  "type": "integer"
+                },
+                "required": false
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/ProvisioningProblem"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ServiceUnavailableProblem"
+                    }
+                  ],
+                  "discriminator": {
+                    "propertyName": "type",
+                    "mapping": {
+                      "https://developers.einargate.com/errors/provisioning": "#/components/schemas/ProvisioningProblem",
+                      "https://developers.einargate.com/errors/service-unavailable": "#/components/schemas/ServiceUnavailableProblem"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "webhooks": {}
+}

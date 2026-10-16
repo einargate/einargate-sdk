@@ -1,0 +1,64 @@
+# Publishes a client when its version tag arrives with a snapshot:
+# typescript-v1.2.3 to npm, python-v1.2.3 to PyPI. Both use trusted
+# publishing (OIDC), so the repository stores no registry token; set them
+# up on npmjs.com and pypi.org for this workflow and the "release"
+# environment. Nothing is published until the repository variable
+# PUBLISH_ENABLED is "true"; to publish a version whose tag arrived before
+# that, run this workflow by hand on the tag.
+name: Release
+
+on:
+  push:
+    tags: ['typescript-v*', 'python-v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  typescript:
+    if: startsWith(github.ref_name, 'typescript-v') && vars.PUBLISH_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      contents: read
+      id-token: write
+    defaults:
+      run:
+        working-directory: typescript
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+          registry-url: 'https://registry.npmjs.org'
+      - name: Check that the tag is the package's version
+        run: test "typescript-v$(node -p "require('./package.json').version")" = "$GITHUB_REF_NAME"
+      - run: npm ci --no-audit --no-fund
+      - run: npm test
+      - run: npm run build
+      - run: npm publish --access public --provenance
+
+  python:
+    if: startsWith(github.ref_name, 'python-v') && vars.PUBLISH_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      contents: read
+      id-token: write
+    defaults:
+      run:
+        working-directory: python
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          python-version: '3.13'
+      - name: Check that the tag is the package's version
+        run: test "python-v$(uv version --short)" = "$GITHUB_REF_NAME"
+      - run: uv sync --frozen
+      - run: uv run pytest -q
+      - run: uv build
+      - uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2
+        with:
+          packages-dir: python/dist

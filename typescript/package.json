@@ -1,0 +1,66 @@
+{
+  "name": "@einargate/sdk",
+  "version": "0.1.0",
+  "description": "The official TypeScript client of the Einar Gate API: typed results, safe retries, built for coding agents",
+  "license": "MIT",
+  "homepage": "https://github.com/einargate/einargate-sdk/tree/main/typescript#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/einargate/einargate-sdk.git",
+    "directory": "typescript"
+  },
+  "bugs": {
+    "url": "https://github.com/einargate/einargate-sdk/issues"
+  },
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./testing": {
+      "types": "./dist/testing.d.ts",
+      "default": "./dist/testing.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "AGENTS.md",
+    "LICENSE"
+  ],
+  "sideEffects": false,
+  "engines": {
+    "node": ">=22.12"
+  },
+  "keywords": [
+    "einargate",
+    "einar gate",
+    "anpr",
+    "license plate",
+    "gate",
+    "api",
+    "sdk"
+  ],
+  "scripts": {
+    "build": "rm -rf dist && tsc -p tsconfig.build.json",
+    "prepack": "npm run build",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "check:examples": "node scripts/check-examples.mjs",
+    "codeformat": "prettier --write .",
+    "codeformat:check": "prettier --check .",
+    "lock": "node scripts/update-lock.mjs"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.0",
+    "prettier": "3.5.3",
+    "typescript": "^5.8.3",
+    "vitest": "^3.0.5"
+  }
+}
