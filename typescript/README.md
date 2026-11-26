@@ -1,9 +1,5 @@
 # @einargate/sdk
 
-> **Very early alpha.** The Einar Gate public API is not generally
-> available yet, and this client may change in breaking ways before 1.0:
-> pin an exact version.
-
 The official TypeScript client of the [Einar Gate](https://einargate.com)
 API: sync license plate permissions, read gates, cameras and gate openings,
 and open gates from your own system.
@@ -15,6 +11,8 @@ and open gates from your own system.
   opening a gate twice.
 - **Built for coding agents.** [AGENTS.md](https://github.com/einargate/einargate-sdk/blob/main/typescript/AGENTS.md) is the complete
   guide; the doc comments name each call's roles and errors.
+- **Documented with tutorials.** Guides, tutorials and the API reference
+  are at [developers.einargate.com](https://developers.einargate.com/sdks/typescript).
 
 ```sh
 npm install @einargate/sdk

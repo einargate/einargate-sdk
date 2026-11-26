@@ -161,7 +161,8 @@ class OperationSpec(Generic[T]):
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class TransportConfig:
-    api_key: str
+    api_key: str = field(repr=False)
+    """Out of the ``repr``, so that logging a client never shows it"""
     base_url: str
     timeout: float
     max_retries: int
@@ -175,7 +176,7 @@ class TransportConfig:
 class _Request:
     method: str
     url: str
-    headers: dict[str, str]
+    headers: dict[str, str] = field(repr=False)
     content: bytes | None
 
 
@@ -192,6 +193,12 @@ def _build_request(
         value = (path or {}).get(name)
         if value is None:
             raise TypeError(f"{spec.id}: the path parameter {name} is missing")
+        # URL parsing would remove a dot segment, and with it a level of the
+        # path: a camera's permission would become the gate's
+        if value in ("", ".", ".."):
+            raise ValueError(
+                f"{spec.id}: the path parameter {name} is {value!r}, which is not an id"
+            )
         url_path = url_path.replace("{" + name + "}", quote(value, safe=""))
 
     params = {name: value for name, value in (query or {}).items() if value is not None}

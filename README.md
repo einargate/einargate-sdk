@@ -1,9 +1,5 @@
 # Einar Gate API clients
 
-> **Very early alpha.** The Einar Gate public API is not generally
-> available yet, and these clients may change in breaking ways before 1.0:
-> pin an exact version.
-
 The official client libraries of the [Einar Gate](https://einargate.com)
 public API, which lets your own systems sync license plate permissions, read
 gates, cameras and gate openings, and open gates.
@@ -15,7 +11,7 @@ gates, cameras and gate openings, and open gates.
 
 Every client is generated from the API's OpenAPI document,
 [`openapi.json`](./openapi.json), the same one the API serves at
-`https://api.einargate.com/v1/openapi.json`. Any other language can generate
+`https://public-api.einargate.com/v1/openapi.json`. Any other language can generate
 a client from it.
 
 ## What every client does the same way
@@ -28,7 +24,9 @@ a client from it.
 - Values the API adds later (enum values, union variants, error types) are
   represented explicitly, so an older client keeps working.
 
-[AGENTS.md](./AGENTS.md) is the short version for coding agents.
+[AGENTS.md](./AGENTS.md) is the short version for coding agents. Guides,
+tutorials and the API reference are at
+[developers.einargate.com](https://developers.einargate.com).
 
 ## This repository
 

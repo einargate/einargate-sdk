@@ -67,7 +67,11 @@ export interface CallInput extends WriteOptions {
 }
 
 export interface TransportConfig {
-  readonly apiKey: string
+  /**
+   * The `Authorization` header's value. A function, so that logging or
+   * inspecting a client never shows the API key.
+   */
+  readonly authorization: () => string
   readonly baseUrl: string
   readonly fetch: typeof globalThis.fetch
   readonly timeoutMs: number
@@ -191,6 +195,14 @@ function buildRequest(
     if (value === undefined) {
       throw new TypeError(`${spec.id}: the path parameter ${name} is missing`)
     }
+    // URL parsing would remove a dot segment, and with it a level of the
+    // path: a camera's permission would become the gate's
+    if (value === '' || value === '.' || value === '..') {
+      throw new TypeError(
+        `${spec.id}: the path parameter ${name} is ${JSON.stringify(value)}, ` +
+          'which is not an id'
+      )
+    }
     return encodeURIComponent(value)
   })
 
@@ -207,7 +219,7 @@ function buildRequest(
     'User-Agent': config.userAgent,
   }
   if (spec.authenticated) {
-    headers.Authorization = `Bearer ${config.apiKey}`
+    headers.Authorization = config.authorization()
   }
   if (idempotencyKey !== undefined) {
     headers[IDEMPOTENCY_KEY_HEADER] = idempotencyKey

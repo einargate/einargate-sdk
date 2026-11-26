@@ -7,7 +7,7 @@
   },
   "servers": [
     {
-      "url": "https://api.einargate.com/v1"
+      "url": "https://public-api.einargate.com/v1"
     }
   ],
   "components": {
@@ -231,7 +231,7 @@
           "status",
           "requestId"
         ],
-        "description": "Conflict. The entity already exists (for a permission: the camera already has the plate and country) or was changed at the same time. Read it again before deciding; a concurrent change is safe to retry."
+        "description": "Conflict. The entity already exists or was changed at the same time. Read it again before deciding; a concurrent change is safe to retry."
       },
       "IdempotencyKeyInFlightProblem": {
         "type": "object",
@@ -913,6 +913,31 @@
         ],
         "description": "Manual openings only"
       },
+      "EventPermission": {
+        "type": "object",
+        "properties": {
+          "permissionId": {
+            "type": "string"
+          },
+          "cameraId": {
+            "type": "string"
+          },
+          "ownerUserId": {
+            "type": "string"
+          },
+          "deleted": {
+            "type": "boolean",
+            "description": "Whether the permission has been deleted since; its id then answers `not-found`. A permission deleted before ids became opaque keeps its older form of id, which only names it within the event"
+          }
+        },
+        "required": [
+          "permissionId",
+          "cameraId",
+          "ownerUserId",
+          "deleted"
+        ],
+        "description": "A permission that let the vehicle in"
+      },
       "Event": {
         "type": "object",
         "properties": {
@@ -1008,25 +1033,12 @@
           "fraudRiskPercentage": {
             "type": "number"
           },
-          "permission": {
-            "type": "object",
-            "properties": {
-              "permissionId": {
-                "type": "string"
-              },
-              "cameraId": {
-                "type": "string"
-              },
-              "ownerUserId": {
-                "type": "string"
-              }
+          "permissions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EventPermission"
             },
-            "required": [
-              "permissionId",
-              "cameraId",
-              "ownerUserId"
-            ],
-            "description": "The permission that let the vehicle in"
+            "description": "Every permission that let the vehicle in, as several can match a plate; empty when none did. One deleted since stays listed, as `deleted`. Automatic openings"
           },
           "createdAt": {
             "type": "string",
@@ -1149,8 +1161,8 @@
         "properties": {
           "permissionId": {
             "type": "string",
-            "description": "**Opaque: store it as it is and URL-encode it in paths.** Find a permission by plate with the `licensePlate` filter instead of building an id.",
-            "example": "ABC123|HU"
+            "description": "**Opaque: store it as it is and URL-encode it in paths.** It never changes while the permission exists. Find permissions by plate with the `licensePlate` filter.",
+            "example": "mhw2HsA9fZ6vT3q8KcYp1e"
           },
           "locationId": {
             "type": "string"
@@ -1236,28 +1248,14 @@
             "type": "string"
           },
           "error": {
-            "oneOf": [
-              {
-                "$ref": "#/components/schemas/ConflictProblem"
-              },
-              {
-                "$ref": "#/components/schemas/LimitExceededProblem"
-              }
-            ],
-            "discriminator": {
-              "propertyName": "type",
-              "mapping": {
-                "https://developers.einargate.com/errors/conflict": "#/components/schemas/ConflictProblem",
-                "https://developers.einargate.com/errors/limit-exceeded": "#/components/schemas/LimitExceededProblem"
-              }
-            }
+            "$ref": "#/components/schemas/LimitExceededProblem"
           }
         },
         "required": [
           "cameraId",
           "error"
         ],
-        "description": "A camera that did not get the permission: `conflict` when it already has one for the plate and country, `limit-exceeded` when a plate limit of the location or the owner would be exceeded"
+        "description": "A camera that did not get the permission: a plate limit of the location or the owner would be exceeded, or the camera holds 10 permissions for the plate"
       },
       "CreatePermissionResult": {
         "type": "object",
@@ -1326,7 +1324,7 @@
             "type": "string",
             "minLength": 1,
             "pattern": "^[\\p{L}0-9 .,/\\p{Dash}]+$",
-            "description": "As typed; changing it changes the `permissionId`, which the response returns"
+            "description": "As typed; changing it makes a new permission with a new `permissionId`, which the response returns"
           },
           "licensePlateCountry": {
             "type": "string",
@@ -2967,7 +2965,7 @@
           "Permissions"
         ],
         "summary": "The location’s permissions",
-        "description": "One item per camera: a plate permitted at a gate with two cameras is listed twice. To find a plate’s permissions, filter by `licensePlate` (and `licensePlateCountry`) rather than building ids.",
+        "description": "One item per permission: a plate permitted at a gate with two cameras is listed at least twice, and a camera may list a plate more than once. To find a plate’s permissions, filter by `licensePlate` (and `licensePlateCountry`) rather than building ids.",
         "security": [
           {
             "bearerAuth": []
@@ -3193,7 +3191,7 @@
           "Permissions"
         ],
         "summary": "Permit a plate at every camera of the location",
-        "description": "The plate is added camera by camera. The answer is `201` when at least one camera got it, listing the cameras that did not with a problem each (`conflict`: it already has the plate; `limit-exceeded`: a plate limit would be exceeded). When no camera got it, the answer is that problem: `conflict` if every camera already has the plate, `limit-exceeded` otherwise. The owner must be a member whose status is `member` (`invalid-owner`). Send an `Idempotency-Key` to retry safely.",
+        "description": "The plate is added camera by camera, as a new permission with its own `permissionId` on each: a camera may hold several permissions for the same plate, of the same or of different owners, so creating it again adds another one, up to 10 for a plate and country. Find what a camera already has with the `licensePlate` filter of the listing. The answer is `201` when at least one camera got it, listing the cameras that did not with a `limit-exceeded` problem each; when no camera got it, the answer is that problem. The owner must be a member whose status is `member` (`invalid-owner`). Send an `Idempotency-Key` to retry safely.",
         "security": [
           {
             "bearerAuth": []
@@ -3299,25 +3297,11 @@
             }
           },
           "409": {
-            "description": "Conflict; Idempotency key in flight",
+            "description": "Idempotency key in flight",
             "content": {
               "application/problem+json": {
                 "schema": {
-                  "oneOf": [
-                    {
-                      "$ref": "#/components/schemas/ConflictProblem"
-                    },
-                    {
-                      "$ref": "#/components/schemas/IdempotencyKeyInFlightProblem"
-                    }
-                  ],
-                  "discriminator": {
-                    "propertyName": "type",
-                    "mapping": {
-                      "https://developers.einargate.com/errors/conflict": "#/components/schemas/ConflictProblem",
-                      "https://developers.einargate.com/errors/idempotency-key-in-flight": "#/components/schemas/IdempotencyKeyInFlightProblem"
-                    }
-                  }
+                  "$ref": "#/components/schemas/IdempotencyKeyInFlightProblem"
                 }
               }
             }
@@ -3422,7 +3406,7 @@
           "Permissions"
         ],
         "summary": "Permit a plate at every camera of a gate",
-        "description": "The plate is added camera by camera. The answer is `201` when at least one camera got it, listing the cameras that did not with a problem each (`conflict`: it already has the plate; `limit-exceeded`: a plate limit would be exceeded). When no camera got it, the answer is that problem: `conflict` if every camera already has the plate, `limit-exceeded` otherwise. The owner must be a member whose status is `member` (`invalid-owner`). Send an `Idempotency-Key` to retry safely.",
+        "description": "The plate is added camera by camera, as a new permission with its own `permissionId` on each: a camera may hold several permissions for the same plate, of the same or of different owners, so creating it again adds another one, up to 10 for a plate and country. Find what a camera already has with the `licensePlate` filter of the listing. The answer is `201` when at least one camera got it, listing the cameras that did not with a `limit-exceeded` problem each; when no camera got it, the answer is that problem. The owner must be a member whose status is `member` (`invalid-owner`). Send an `Idempotency-Key` to retry safely.",
         "security": [
           {
             "bearerAuth": []
@@ -3538,25 +3522,11 @@
             }
           },
           "409": {
-            "description": "Conflict; Idempotency key in flight",
+            "description": "Idempotency key in flight",
             "content": {
               "application/problem+json": {
                 "schema": {
-                  "oneOf": [
-                    {
-                      "$ref": "#/components/schemas/ConflictProblem"
-                    },
-                    {
-                      "$ref": "#/components/schemas/IdempotencyKeyInFlightProblem"
-                    }
-                  ],
-                  "discriminator": {
-                    "propertyName": "type",
-                    "mapping": {
-                      "https://developers.einargate.com/errors/conflict": "#/components/schemas/ConflictProblem",
-                      "https://developers.einargate.com/errors/idempotency-key-in-flight": "#/components/schemas/IdempotencyKeyInFlightProblem"
-                    }
-                  }
+                  "$ref": "#/components/schemas/IdempotencyKeyInFlightProblem"
                 }
               }
             }
@@ -3661,7 +3631,7 @@
           "Permissions"
         ],
         "summary": "Permit a plate at one camera",
-        "description": "The plate is added camera by camera. The answer is `201` when at least one camera got it, listing the cameras that did not with a problem each (`conflict`: it already has the plate; `limit-exceeded`: a plate limit would be exceeded). When no camera got it, the answer is that problem: `conflict` if every camera already has the plate, `limit-exceeded` otherwise. The owner must be a member whose status is `member` (`invalid-owner`). Send an `Idempotency-Key` to retry safely.",
+        "description": "The plate is added camera by camera, as a new permission with its own `permissionId` on each: a camera may hold several permissions for the same plate, of the same or of different owners, so creating it again adds another one, up to 10 for a plate and country. Find what a camera already has with the `licensePlate` filter of the listing. The answer is `201` when at least one camera got it, listing the cameras that did not with a `limit-exceeded` problem each; when no camera got it, the answer is that problem. The owner must be a member whose status is `member` (`invalid-owner`). Send an `Idempotency-Key` to retry safely.",
         "security": [
           {
             "bearerAuth": []
@@ -3787,25 +3757,11 @@
             }
           },
           "409": {
-            "description": "Conflict; Idempotency key in flight",
+            "description": "Idempotency key in flight",
             "content": {
               "application/problem+json": {
                 "schema": {
-                  "oneOf": [
-                    {
-                      "$ref": "#/components/schemas/ConflictProblem"
-                    },
-                    {
-                      "$ref": "#/components/schemas/IdempotencyKeyInFlightProblem"
-                    }
-                  ],
-                  "discriminator": {
-                    "propertyName": "type",
-                    "mapping": {
-                      "https://developers.einargate.com/errors/conflict": "#/components/schemas/ConflictProblem",
-                      "https://developers.einargate.com/errors/idempotency-key-in-flight": "#/components/schemas/IdempotencyKeyInFlightProblem"
-                    }
-                  }
+                  "$ref": "#/components/schemas/IdempotencyKeyInFlightProblem"
                 }
               }
             }
@@ -4082,7 +4038,7 @@
           "Permissions"
         ],
         "summary": "Replace a permission of a camera",
-        "description": "Send the full representation: a field that is not given is removed. Changing the plate or country changes the `permissionId`; the response carries the new one. The owner cannot be changed: remove the permission and create it for the new owner.",
+        "description": "Send the full representation: a field that is not given is removed. Changing the plate or country makes it a new permission with a new `permissionId`, which the response carries; the old id answers `not-found` from then on. If a plate limit refuses the new plate, the answer is `limit-exceeded` and the permission is removed: create it again. If the permission changed while its plate was being changed, the answer is `conflict` and nothing is changed: read it and try again. The owner cannot be changed: remove the permission and create it for the new owner.",
         "security": [
           {
             "bearerAuth": []
@@ -4242,11 +4198,25 @@
             }
           },
           "422": {
-            "description": "Idempotency key reused",
+            "description": "Idempotency key reused; Limit exceeded",
             "content": {
               "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/IdempotencyKeyReuseProblem"
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/IdempotencyKeyReuseProblem"
+                    },
+                    {
+                      "$ref": "#/components/schemas/LimitExceededProblem"
+                    }
+                  ],
+                  "discriminator": {
+                    "propertyName": "type",
+                    "mapping": {
+                      "https://developers.einargate.com/errors/idempotency-key-reuse": "#/components/schemas/IdempotencyKeyReuseProblem",
+                      "https://developers.einargate.com/errors/limit-exceeded": "#/components/schemas/LimitExceededProblem"
+                    }
+                  }
                 }
               }
             }

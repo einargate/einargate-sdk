@@ -1,6 +1,6 @@
 [project]
 name = "einargate"
-version = "0.1.0"
+version = "1.0.0"
 description = "The official Python client of the Einar Gate API: typed results, safe retries, built for coding agents"
 readme = "README.md"
 license = "MIT"
@@ -9,7 +9,7 @@ requires-python = ">=3.10"
 dependencies = ["httpx>=0.27,<1"]
 keywords = ["einargate", "einar gate", "anpr", "license plate", "gate", "api", "sdk"]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 5 - Production/Stable",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
     "Typing :: Typed",
@@ -18,7 +18,7 @@ classifiers = [
 
 [project.urls]
 Homepage = "https://einargate.com"
-Documentation = "https://github.com/einargate/einargate-sdk/blob/main/python/AGENTS.md"
+Documentation = "https://developers.einargate.com/sdks/python"
 Repository = "https://github.com/einargate/einargate-sdk"
 Issues = "https://github.com/einargate/einargate-sdk/issues"
 

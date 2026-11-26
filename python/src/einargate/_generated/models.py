@@ -336,8 +336,11 @@ class Event:
     direction: str | None = None
     speed: float | None = None
     fraud_risk_percentage: float | None = None
-    permission: EventPermission | None = None
-    """The permission that let the vehicle in"""
+    permissions: tuple[EventPermission, ...] | None = None
+    """Every permission that let the vehicle in, as several can match a plate; empty
+    when none did. One deleted since stays listed, as ``deleted``. Automatic
+    openings
+    """
     created_at: datetime
     updated_at: datetime
 
@@ -386,11 +389,16 @@ EventInitiator: TypeAlias = Union[
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class EventPermission:
-    """The permission that let the vehicle in"""
+    """A permission that let the vehicle in"""
 
     permission_id: str
     camera_id: str
     owner_user_id: str
+    deleted: bool
+    """Whether the permission has been deleted since; its id then answers
+    ``not-found``. A permission deleted before ids became opaque keeps its older
+    form of id, which only names it within the event
+    """
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -421,13 +429,12 @@ class EventWithAttachments(Event):
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class FailedCamera:
-    """A camera that did not get the permission: ``conflict`` when it already has one for
-    the plate and country, ``limit-exceeded`` when a plate limit of the location or the
-    owner would be exceeded
+    """A camera that did not get the permission: a plate limit of the location or the owner
+    would be exceeded, or the camera holds 10 permissions for the plate
     """
 
     camera_id: str
-    error: ConflictProblem | LimitExceededProblem | UnknownProblem
+    error: LimitExceededProblem | UnknownProblem
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -528,8 +535,9 @@ class Permission:
     """
 
     permission_id: str
-    """**Opaque: store it as it is and URL-encode it in paths.** Find a permission by
-    plate with the ``licensePlate`` filter instead of building an id.
+    """**Opaque: store it as it is and URL-encode it in paths.** It never changes
+    while the permission exists. Find permissions by plate with the
+    ``licensePlate`` filter.
     """
     location_id: str
     gate_id: str
@@ -568,7 +576,9 @@ class ReplacePermission:
     """
 
     license_plate: str
-    """As typed; changing it changes the ``permissionId``, which the response returns"""
+    """As typed; changing it makes a new permission with a new ``permissionId``,
+    which the response returns
+    """
     license_plate_country: str | None
     """``null`` for a plate without a country"""
     active: bool
@@ -582,9 +592,8 @@ class ReplacePermission:
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class ConflictProblem(ProblemBase):
-    """Conflict: The entity already exists (for a permission: the camera already has the
-    plate and country) or was changed at the same time. Read it again before deciding; a
-    concurrent change is safe to retry.
+    """Conflict: The entity already exists or was changed at the same time. Read it again
+    before deciding; a concurrent change is safe to retry.
     """
 
     type: Literal["conflict"] = "conflict"
@@ -595,7 +604,7 @@ CONFLICT_PROBLEM = ProblemType(
     slug="conflict",
     status=409,
     title="Conflict",
-    hint="The entity already exists (for a permission: the camera already has the plate and country) or was changed at the same time. Read it again before deciding; a concurrent change is safe to retry.",
+    hint="The entity already exists or was changed at the same time. Read it again before deciding; a concurrent change is safe to retry.",
     docs_url="https://developers.einargate.com/errors/conflict",
 )
 
@@ -1076,7 +1085,9 @@ def decode_event(value: object, path: str) -> Event:
         direction=d.optional(o, "direction", path, d.string),
         speed=d.optional(o, "speed", path, d.number),
         fraud_risk_percentage=d.optional(o, "fraudRiskPercentage", path, d.number),
-        permission=d.optional(o, "permission", path, decode_event_permission),
+        permissions=d.optional(
+            o, "permissions", path, d.array_decoder(decode_event_permission)
+        ),
         created_at=d.required(o, "createdAt", path, d.timestamp),
         updated_at=d.required(o, "updatedAt", path, d.timestamp),
     )
@@ -1127,6 +1138,7 @@ def decode_event_permission(value: object, path: str) -> EventPermission:
         permission_id=d.required(o, "permissionId", path, d.string),
         camera_id=d.required(o, "cameraId", path, d.string),
         owner_user_id=d.required(o, "ownerUserId", path, d.string),
+        deleted=d.required(o, "deleted", path, d.boolean),
     )
 
 
@@ -1165,7 +1177,9 @@ def decode_event_with_attachments(value: object, path: str) -> EventWithAttachme
         direction=d.optional(o, "direction", path, d.string),
         speed=d.optional(o, "speed", path, d.number),
         fraud_risk_percentage=d.optional(o, "fraudRiskPercentage", path, d.number),
-        permission=d.optional(o, "permission", path, decode_event_permission),
+        permissions=d.optional(
+            o, "permissions", path, d.array_decoder(decode_event_permission)
+        ),
         created_at=d.required(o, "createdAt", path, d.timestamp),
         updated_at=d.required(o, "updatedAt", path, d.timestamp),
         attachments=d.required(
@@ -1178,9 +1192,7 @@ def decode_failed_camera(value: object, path: str) -> FailedCamera:
     o = d.object_(value, path)
     return FailedCamera(
         camera_id=d.required(o, "cameraId", path, d.string),
-        error=d.required(
-            o, "error", path, problems_decoder(("conflict", "limit-exceeded"))
-        ),
+        error=d.required(o, "error", path, problems_decoder(("limit-exceeded",))),
     )
 
 
@@ -1377,7 +1389,10 @@ def encode_event(value: Event) -> dict[str, object]:
             "direction": value.direction,
             "speed": value.speed,
             "fraudRiskPercentage": value.fraud_risk_percentage,
-            "permission": e.optional(value.permission, encode_event_permission),
+            "permissions": e.optional(
+                value.permissions,
+                lambda v: [encode_event_permission(item) for item in v],
+            ),
             "createdAt": e.timestamp(value.created_at),
             "updatedAt": e.timestamp(value.updated_at),
         }
@@ -1426,6 +1441,7 @@ def encode_event_permission(value: EventPermission) -> dict[str, object]:
             "permissionId": value.permission_id,
             "cameraId": value.camera_id,
             "ownerUserId": value.owner_user_id,
+            "deleted": value.deleted,
         }
     )
 
@@ -1463,7 +1479,10 @@ def encode_event_with_attachments(value: EventWithAttachments) -> dict[str, obje
             "direction": value.direction,
             "speed": value.speed,
             "fraudRiskPercentage": value.fraud_risk_percentage,
-            "permission": e.optional(value.permission, encode_event_permission),
+            "permissions": e.optional(
+                value.permissions,
+                lambda v: [encode_event_permission(item) for item in v],
+            ),
             "createdAt": e.timestamp(value.created_at),
             "updatedAt": e.timestamp(value.updated_at),
             "attachments": [

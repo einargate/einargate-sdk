@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import re
-from dataclasses import fields
+from dataclasses import fields, replace
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Literal, TypeVar
@@ -30,7 +30,9 @@ from einargate import (
     __version__,
     is_unknown,
 )
+from einargate._generated.operations import LIST_GATES
 from einargate._helpers import CARRIED_FIELDS
+from einargate._runtime.transport import _build_request  # pyright: ignore[reportPrivateUsage]
 from einargate.testing import MOCK_API_KEY, MockCall, MockEinarGate, MockReply
 
 from .fixtures import GATE, PERMISSION, WHEN, permission_body
@@ -422,6 +424,49 @@ def test_looks_the_location_up_again_after_a_failure_nobody_waited_for() -> None
     assert len(mock.calls_of("get_me")) == 2
 
 
+@pytest.mark.parametrize("timeout", [None, 1e9])
+def test_waits_for_the_location_within_windows_lock_limit(
+    monkeypatch: pytest.MonkeyPatch, timeout: float | None
+) -> None:
+    import concurrent.futures
+    import time
+
+    windows_timeout_max = 4294967.0
+    real_result = concurrent.futures.Future.result
+
+    def result_as_on_windows(
+        self: concurrent.futures.Future[object], timeout: float | None = None
+    ) -> object:
+        if timeout is not None and timeout > windows_timeout_max:
+            raise OverflowError("timeout value is too large")
+        return real_result(self, timeout)
+
+    monkeypatch.setattr(concurrent.futures.Future, "result", result_as_on_windows)
+    monkeypatch.setattr("threading.TIMEOUT_MAX", windows_timeout_max)
+
+    me = {
+        "apiKeyId": "k1",
+        "name": "Sync",
+        "locationId": "loc-from-me",
+        "roles": [],
+        "subscriptionActive": True,
+        "rateLimit": {"requestsPerSecond": 17, "burst": 200, "requestsPerDay": 100000},
+    }
+
+    def slow_me(call: MockCall) -> MockReply[Me, Literal["service-unavailable"]]:
+        time.sleep(0.1)
+        return MockReply.raw(200, me)
+
+    mock = (
+        MockEinarGate()
+        .on("get_me", slow_me)
+        .on("list_gates", lambda call: MockReply.ok(_page([])))
+    )
+    with mock.client(location_id=None) as eg:
+        gates = eg.gates.list(timeout=timeout)
+    assert isinstance(gates, Ok)
+
+
 def test_a_closed_client_returns_the_closed_error() -> None:
     import time
 
@@ -467,10 +512,21 @@ def test_a_lookup_cancelled_before_it_ran_returns_the_closed_error() -> None:
     assert str(result.error) == "The Einar Gate client was closed"
 
 
-def test_refuses_a_malformed_base_url() -> None:
-    for base_url in ("not a url", "ftp://api.einargate.com/v1", "https://"):
+def test_refuses_a_malformed_or_plain_http_base_url() -> None:
+    for base_url in (
+        "not a url",
+        "ftp://public-api.einargate.com/v1",
+        "https://",
+        "http://public-api.einargate.com/v1",
+    ):
         with pytest.raises(ValueError, match="base_url"):
             EinarGate(MOCK_API_KEY, base_url=base_url)
+    for base_url in (
+        "http://localhost:3000/v1",
+        "http://127.0.0.1:3000/v1",
+        "http://[::1]:3000/v1",
+    ):
+        EinarGate(MOCK_API_KEY, base_url=base_url).close()
 
 
 def test_creates_a_permission_at_the_scope_at_names() -> None:
@@ -534,6 +590,28 @@ def test_url_encodes_ids_and_sends_a_listing_scope_as_filters() -> None:
     )
     assert mock.calls[1].query == {"gateId": "g1", "cameraId": "c1", "active": "false"}
     assert mock.calls[2].query == {"gateId": "g1"}
+
+
+def test_refuses_an_id_that_a_url_would_drop_as_a_dot_segment() -> None:
+    mock = MockEinarGate().on("delete_permission", lambda call: MockReply.ok())
+    with mock.client() as eg:
+        for camera_id in ("", ".", ".."):
+            with pytest.raises(
+                ValueError,
+                match=re.escape(
+                    f"deletePermission: the path parameter cameraId is "
+                    f"{camera_id!r}, which is not an id"
+                ),
+            ):
+                eg.permissions.delete(replace(PERMISSION, camera_id=camera_id))
+        assert mock.calls == []
+
+        assert isinstance(
+            eg.permissions.delete(replace(PERMISSION, permission_id="...")), Ok
+        )
+    assert mock.calls[0].path == (
+        "/locations/mock-location/gates/g1/cameras/c1/permissions/..."
+    )
 
 
 def test_replaces_with_none_as_removal_and_updates_from_the_permission() -> None:
@@ -624,6 +702,17 @@ def test_sends_a_user_agent_with_the_version_and_the_app() -> None:
         headers["user-agent"],
     )
     assert headers["authorization"] == f"Bearer {MOCK_API_KEY}"
+
+
+def test_keeps_the_api_key_out_of_reprs() -> None:
+    with MockEinarGate().client() as eg:
+        config = eg._context_ref.transport.config  # pyright: ignore[reportPrivateUsage]
+        request = _build_request(  # pyright: ignore[reportPrivateUsage]
+            config, LIST_GATES, {"locationId": "l1"}, None, None, None
+        )
+    assert request.headers["Authorization"] == f"Bearer {MOCK_API_KEY}"
+    for value in (config, request):
+        assert MOCK_API_KEY not in repr(value)
 
 
 def test_keeps_the_version_equal_to_pyprojects() -> None:

@@ -35,8 +35,9 @@ from ._runtime.result import Ok, Result
 from ._runtime.transport import AsyncTransport, Transport, TransportConfig
 from ._version import __version__
 
-DEFAULT_BASE_URL = "https://api.einargate.com/v1"
+DEFAULT_BASE_URL = "https://public-api.einargate.com/v1"
 _PROBLEM_TYPE_BASE_URI = "https://developers.einargate.com/errors/"
+_LOOPBACK_HOSTS = ("localhost", "127.0.0.1", "::1")
 
 
 @dataclass(frozen=True, slots=True)
@@ -56,8 +57,15 @@ def _base_url(value: str) -> str:
         raise ValueError(f"base_url {value!r} is not a valid URL: {error}") from None
     if url.scheme not in ("http", "https") or not url.host:
         raise ValueError(
-            f"base_url {value!r} must be an http or https URL with a host, "
+            f"base_url {value!r} must be an https URL with a host, "
             f"such as {DEFAULT_BASE_URL!r}"
+        )
+    # The API key goes with every call: only a local test server may have it
+    # in the clear
+    if url.scheme == "http" and url.host not in _LOOPBACK_HOSTS:
+        raise ValueError(
+            f"base_url {value!r} must be an https URL: the client sends the API "
+            "key with every call. Plain http is only for localhost."
         )
     return value.rstrip("/")
 
@@ -137,10 +145,11 @@ class EinarGate(RootResource):
 
         ``api_key`` defaults to the ``EINARGATE_API_KEY`` environment variable;
         keep it on the server. ``location_id`` is read from ``GET /me`` on
-        first use when left out. ``timeout`` is per attempt, in seconds;
-        ``max_retries`` counts the retries of what is safe to retry.
-        ``http_client`` replaces the client's own ``httpx.Client``, e.g. for a
-        proxy; the caller then closes it.
+        first use when left out. ``base_url`` must be https, as every call
+        carries the API key; plain http is allowed only for localhost.
+        ``timeout`` is per attempt, in seconds; ``max_retries`` counts the
+        retries of what is safe to retry. ``http_client`` replaces the client's
+        own ``httpx.Client``, e.g. for a proxy; the caller then closes it.
         """
         config = _config(api_key, base_url, timeout, max_retries, app_info)
         self._owns_http_client = http_client is None

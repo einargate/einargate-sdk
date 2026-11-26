@@ -250,7 +250,6 @@ CREATE_LOCATION_PERMISSION: OperationSpec[t.CreatePermissionResult] = OperationS
     decode=t.decode_create_permission_result,
     encode=t.encode_create_permission_result,
     problems={
-        "conflict": t.decode_conflict_problem,
         "forbidden": t.decode_forbidden_problem,
         "idempotency-key-in-flight": t.decode_idempotency_key_in_flight_problem,
         "idempotency-key-reuse": t.decode_idempotency_key_reuse_problem,
@@ -276,7 +275,6 @@ CREATE_GATE_PERMISSION: OperationSpec[t.CreatePermissionResult] = OperationSpec(
     decode=t.decode_create_permission_result,
     encode=t.encode_create_permission_result,
     problems={
-        "conflict": t.decode_conflict_problem,
         "forbidden": t.decode_forbidden_problem,
         "idempotency-key-in-flight": t.decode_idempotency_key_in_flight_problem,
         "idempotency-key-reuse": t.decode_idempotency_key_reuse_problem,
@@ -302,7 +300,6 @@ CREATE_CAMERA_PERMISSION: OperationSpec[t.CreatePermissionResult] = OperationSpe
     decode=t.decode_create_permission_result,
     encode=t.encode_create_permission_result,
     problems={
-        "conflict": t.decode_conflict_problem,
         "forbidden": t.decode_forbidden_problem,
         "idempotency-key-in-flight": t.decode_idempotency_key_in_flight_problem,
         "idempotency-key-reuse": t.decode_idempotency_key_reuse_problem,
@@ -355,6 +352,7 @@ REPLACE_PERMISSION: OperationSpec[t.Permission] = OperationSpec(
         "idempotency-key-reuse": t.decode_idempotency_key_reuse_problem,
         "internal": t.decode_internal_problem,
         "invalid-request": t.decode_invalid_request_problem,
+        "limit-exceeded": t.decode_limit_exceeded_problem,
         "not-found": t.decode_not_found_problem,
         "provisioning": t.decode_provisioning_problem,
         "rate-limited": t.decode_rate_limited_problem,
@@ -515,7 +513,6 @@ ListPermissionsError: TypeAlias = Union[
 """The errors ``permissions.list`` can return"""
 
 CreatePermissionError: TypeAlias = Union[
-    t.ConflictProblem,
     t.IdempotencyKeyInFlightProblem,
     t.IdempotencyKeyReuseProblem,
     t.InvalidOwnerProblem,
@@ -537,6 +534,7 @@ ReplacePermissionError: TypeAlias = Union[
     t.IdempotencyKeyInFlightProblem,
     t.IdempotencyKeyReuseProblem,
     t.InvalidRequestProblem,
+    t.LimitExceededProblem,
     t.NotFoundProblem,
     CommonProblem,
     CallError,

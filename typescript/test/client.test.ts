@@ -1,3 +1,4 @@
+import { inspect } from 'node:util'
 import { describe, expect, it } from 'vitest'
 import {
   EinarGate,
@@ -529,6 +530,29 @@ describe('requests', () => {
     })
   })
 
+  it('refuses an id that a URL would drop as a dot segment', async () => {
+    const mock = new MockEinarGate().on('deletePermission', () => ({
+      data: undefined,
+    }))
+    const eg = mock.client()
+
+    for (const cameraId of ['', '.', '..']) {
+      await expect(
+        eg.permissions.delete({ ...permission, cameraId })
+      ).rejects.toThrow(
+        new TypeError(
+          `deletePermission: the path parameter cameraId is ${JSON.stringify(cameraId)}, which is not an id`
+        )
+      )
+    }
+    expect(mock.calls).toEqual([])
+
+    await eg.permissions.delete({ ...permission, permissionId: '...' })
+    expect(mock.calls[0].path).toBe(
+      '/locations/mock-location/gates/g1/cameras/c1/permissions/...'
+    )
+  })
+
   it('replaces with supplementalInfo null as a removal, and updates from the permission', async () => {
     const mock = new MockEinarGate().on('replacePermission', () => ({
       data: permission,
@@ -582,6 +606,35 @@ describe('requests', () => {
       new RegExp(`^einargate-typescript/${VERSION} .* acme-sync/1\\.2\\.0$`)
     )
     expect(mock.calls[0].headers.authorization).toBe(`Bearer ${MOCK_API_KEY}`)
+  })
+
+  it('refuses a malformed or plain-http base URL, except for localhost', () => {
+    for (const baseUrl of [
+      'not a url',
+      'ftp://public-api.einargate.com/v1',
+      'http://public-api.einargate.com/v1',
+    ]) {
+      expect(() => new EinarGate({ apiKey: MOCK_API_KEY, baseUrl })).toThrow(
+        /^baseUrl /
+      )
+    }
+    for (const baseUrl of [
+      'http://localhost:3000/v1',
+      'http://127.0.0.1:3000/v1',
+      'http://[::1]:3000/v1',
+    ]) {
+      expect(
+        () => new EinarGate({ apiKey: MOCK_API_KEY, baseUrl })
+      ).not.toThrow()
+    }
+  })
+
+  it('keeps the API key out of what logging the client shows', () => {
+    const eg = new MockEinarGate().client()
+    expect(inspect(eg, { depth: Infinity, showHidden: true })).not.toContain(
+      MOCK_API_KEY.slice(4)
+    )
+    expect(JSON.stringify(eg)).not.toContain(MOCK_API_KEY.slice(4))
   })
 
   it('keeps VERSION equal to package.json’s', () => {

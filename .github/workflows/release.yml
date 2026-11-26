@@ -5,6 +5,20 @@
 # environment. Nothing is published until the repository variable
 # PUBLISH_ENABLED is "true"; to publish a version whose tag arrived before
 # that, run this workflow by hand on the tag.
+#
+# Each client has two jobs. The build job checks that the tag is the
+# package's version and that its commit is on main, where only snapshots
+# arrive, then tests and packs the client without any credential. The
+# publish job holds the OIDC token, in the "release" environment, and runs
+# nothing from the snapshot: it publishes the packed files as they are.
+# npm takes the package as a staged publish, which goes live only when a
+# maintainer approves it with 2FA under Staged Packages on npmjs.com (or
+# with npm stage approve), so its trusted publisher needs to allow only
+# npm stage publish.
+# In the repository's settings, let the "release" environment deploy only
+# from typescript-v* and python-v* tags, with a required reviewer, and
+# protect those tags, and main, with rulesets that only the snapshot's
+# deploy key may bypass.
 name: Release
 
 on:
@@ -16,41 +30,74 @@ permissions:
   contents: read
 
 jobs:
-  typescript:
-    if: startsWith(github.ref_name, 'typescript-v') && vars.PUBLISH_ENABLED == 'true'
+  typescript-build:
+    if: >-
+      github.ref_type == 'tag' && startsWith(github.ref_name, 'typescript-v') &&
+      vars.PUBLISH_ENABLED == 'true'
     runs-on: ubuntu-latest
-    environment: release
-    permissions:
-      contents: read
-      id-token: write
     defaults:
       run:
         working-directory: typescript
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Check that the tagged commit is a snapshot on main
+        run: git merge-base --is-ancestor "$GITHUB_SHA" origin/main
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: '24'
-          registry-url: 'https://registry.npmjs.org'
       - name: Check that the tag is the package's version
         run: test "typescript-v$(node -p "require('./package.json').version")" = "$GITHUB_REF_NAME"
       - run: npm ci --no-audit --no-fund
       - run: npm test
-      - run: npm run build
-      - run: npm publish --access public --provenance
+      # prepack builds dist/
+      - run: |
+          mkdir "$RUNNER_TEMP/package"
+          npm pack --pack-destination "$RUNNER_TEMP/package"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: typescript-package
+          path: ${{ runner.temp }}/package/
+          if-no-files-found: error
+          retention-days: 7
 
-  python:
-    if: startsWith(github.ref_name, 'python-v') && vars.PUBLISH_ENABLED == 'true'
+  typescript-publish:
+    needs: typescript-build
     runs-on: ubuntu-latest
     environment: release
     permissions:
       contents: read
       id-token: write
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: typescript-package
+          path: package
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+          registry-url: 'https://registry.npmjs.org'
+      # A tarball runs no lifecycle scripts when it is staged. Staging needs
+      # npm 11.15.0 or later; Node 24 brings a newer one.
+      - run: npm stage publish package/*.tgz --access public --provenance
+
+  python-build:
+    if: >-
+      github.ref_type == 'tag' && startsWith(github.ref_name, 'python-v') &&
+      vars.PUBLISH_ENABLED == 'true'
+    runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: python
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Check that the tagged commit is a snapshot on main
+        run: git merge-base --is-ancestor "$GITHUB_SHA" origin/main
       - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
           python-version: '3.13'
@@ -59,6 +106,25 @@ jobs:
       - run: uv sync --frozen
       - run: uv run pytest -q
       - run: uv build
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: python-package
+          path: python/dist/
+          if-no-files-found: error
+          retention-days: 7
+
+  python-publish:
+    needs: python-build
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: python-package
+          path: dist
       - uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2
         with:
-          packages-dir: python/dist
+          packages-dir: dist

@@ -384,7 +384,6 @@ class MockOperations:
             MockReply[
                 t.CreatePermissionResult,
                 Literal[
-                    "conflict",
                     "forbidden",
                     "idempotency-key-in-flight",
                     "idempotency-key-reuse",
@@ -411,7 +410,6 @@ class MockOperations:
             MockReply[
                 t.CreatePermissionResult,
                 Literal[
-                    "conflict",
                     "forbidden",
                     "idempotency-key-in-flight",
                     "idempotency-key-reuse",
@@ -438,7 +436,6 @@ class MockOperations:
             MockReply[
                 t.CreatePermissionResult,
                 Literal[
-                    "conflict",
                     "forbidden",
                     "idempotency-key-in-flight",
                     "idempotency-key-reuse",
@@ -493,6 +490,7 @@ class MockOperations:
                     "idempotency-key-reuse",
                     "internal",
                     "invalid-request",
+                    "limit-exceeded",
                     "not-found",
                     "provisioning",
                     "rate-limited",

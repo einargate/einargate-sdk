@@ -48,15 +48,17 @@ export class EventsResource extends GeneratedEventsResource {
    * yielded once, as first seen: get it again for a later status. A
    * failure is yielded and ends the iteration; so does aborting `signal`.
    *
+   * **It can skip events.** Events arrive in event time order, and an
+   * event that reaches the API late, with an earlier time than the last one
+   * yielded, is never yielded. Where every event counts, also `listAll`
+   * the recent past now and then, and match it by `eventId`.
+   *
    * ```ts
    * for await (const result of eg.events.follow({ gateId })) {
    *   if (!result.success) break
    *   console.log(result.data.eventTime, result.data.plate?.text)
    * }
    * ```
-   *
-   * Events arrive in event time order; an event that reaches the API late
-   * with an earlier time than the last one seen is not yielded.
    */
   async *follow(
     params: FollowEventsParams = {},

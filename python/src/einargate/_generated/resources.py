@@ -344,9 +344,10 @@ class PermissionsResource:
     ) -> Result[Page[t.Permission], o.ListPermissionsError]:
         """The location’s permissions.
 
-        One item per camera: a plate permitted at a gate with two cameras is listed
-        twice. To find a plate’s permissions, filter by ``licensePlate`` (and
-        ``licensePlateCountry``) rather than building ids.
+        One item per permission: a plate permitted at a gate with two cameras is listed
+        at least twice, and a camera may list a plate more than once. To find a plate’s
+        permissions, filter by ``licensePlate`` (and ``licensePlateCountry``) rather
+        than building ids.
 
         - ``GET /locations/{locationId}/permissions``
         - Roles: ``IntegrationPermissionReader``, ``IntegrationPermissionManager``
@@ -420,11 +421,13 @@ class PermissionsResource:
         """Permit a plate at every camera of the location, at every camera of a gate, or at
         one camera.
 
-        The plate is added camera by camera. The answer is ``201`` when at least one
-        camera got it, listing the cameras that did not with a problem each
-        (``conflict``: it already has the plate; ``limit-exceeded``: a plate limit would
-        be exceeded). When no camera got it, the answer is that problem: ``conflict`` if
-        every camera already has the plate, ``limit-exceeded`` otherwise. The owner must
+        The plate is added camera by camera, as a new permission with its own
+        ``permissionId`` on each: a camera may hold several permissions for the same
+        plate, of the same or of different owners, so creating it again adds another
+        one, up to 10 for a plate and country. Find what a camera already has with the
+        ``licensePlate`` filter of the listing. The answer is ``201`` when at least one
+        camera got it, listing the cameras that did not with a ``limit-exceeded``
+        problem each; when no camera got it, the answer is that problem. The owner must
         be a member whose status is ``member`` (``invalid-owner``). Send an
         ``Idempotency-Key`` to retry safely.
 
@@ -434,10 +437,9 @@ class PermissionsResource:
         - ``POST /locations/{locationId}/gates/{gateId}/cameras/{cameraId}/permissions``
           (``at``: a ``Camera`` or ``CameraScope``)
         - Roles: ``IntegrationPermissionManager``
-        - Errors: ``conflict``, ``idempotency-key-in-flight``,
-          ``idempotency-key-reuse``, ``invalid-owner``, ``invalid-request``,
-          ``limit-exceeded``, ``not-found``, those of every call (``CommonProblem``,
-          ``CallError``)
+        - Errors: ``idempotency-key-in-flight``, ``idempotency-key-reuse``,
+          ``invalid-owner``, ``invalid-request``, ``limit-exceeded``, ``not-found``,
+          those of every call (``CommonProblem``, ``CallError``)
         - Idempotent: an ``Idempotency-Key`` is sent, so retries are safe; pass
           ``idempotency_key`` to choose it
         """
@@ -523,16 +525,20 @@ class PermissionsResource:
         """Replace a permission of a camera.
 
         Send the full representation: a field that is not given is removed. Changing the
-        plate or country changes the ``permissionId``; the response carries the new one.
-        The owner cannot be changed: remove the permission and create it for the new
-        owner.
+        plate or country makes it a new permission with a new ``permissionId``, which
+        the response carries; the old id answers ``not-found`` from then on. If a plate
+        limit refuses the new plate, the answer is ``limit-exceeded`` and the permission
+        is removed: create it again. If the permission changed while its plate was being
+        changed, the answer is ``conflict`` and nothing is changed: read it and try
+        again. The owner cannot be changed: remove the permission and create it for the
+        new owner.
 
         - ``PUT
           /locations/{locationId}/gates/{gateId}/cameras/{cameraId}/permissions/{permissionId}``
         - Roles: ``IntegrationPermissionManager``
         - Errors: ``conflict``, ``idempotency-key-in-flight``,
-          ``idempotency-key-reuse``, ``invalid-request``, ``not-found``, those of every
-          call (``CommonProblem``, ``CallError``)
+          ``idempotency-key-reuse``, ``invalid-request``, ``limit-exceeded``,
+          ``not-found``, those of every call (``CommonProblem``, ``CallError``)
         - Idempotent: an ``Idempotency-Key`` is sent, so retries are safe; pass
           ``idempotency_key`` to choose it
         """
@@ -1031,9 +1037,10 @@ class AsyncPermissionsResource:
     ) -> Result[Page[t.Permission], o.ListPermissionsError]:
         """The location’s permissions.
 
-        One item per camera: a plate permitted at a gate with two cameras is listed
-        twice. To find a plate’s permissions, filter by ``licensePlate`` (and
-        ``licensePlateCountry``) rather than building ids.
+        One item per permission: a plate permitted at a gate with two cameras is listed
+        at least twice, and a camera may list a plate more than once. To find a plate’s
+        permissions, filter by ``licensePlate`` (and ``licensePlateCountry``) rather
+        than building ids.
 
         - ``GET /locations/{locationId}/permissions``
         - Roles: ``IntegrationPermissionReader``, ``IntegrationPermissionManager``
@@ -1107,11 +1114,13 @@ class AsyncPermissionsResource:
         """Permit a plate at every camera of the location, at every camera of a gate, or at
         one camera.
 
-        The plate is added camera by camera. The answer is ``201`` when at least one
-        camera got it, listing the cameras that did not with a problem each
-        (``conflict``: it already has the plate; ``limit-exceeded``: a plate limit would
-        be exceeded). When no camera got it, the answer is that problem: ``conflict`` if
-        every camera already has the plate, ``limit-exceeded`` otherwise. The owner must
+        The plate is added camera by camera, as a new permission with its own
+        ``permissionId`` on each: a camera may hold several permissions for the same
+        plate, of the same or of different owners, so creating it again adds another
+        one, up to 10 for a plate and country. Find what a camera already has with the
+        ``licensePlate`` filter of the listing. The answer is ``201`` when at least one
+        camera got it, listing the cameras that did not with a ``limit-exceeded``
+        problem each; when no camera got it, the answer is that problem. The owner must
         be a member whose status is ``member`` (``invalid-owner``). Send an
         ``Idempotency-Key`` to retry safely.
 
@@ -1121,10 +1130,9 @@ class AsyncPermissionsResource:
         - ``POST /locations/{locationId}/gates/{gateId}/cameras/{cameraId}/permissions``
           (``at``: a ``Camera`` or ``CameraScope``)
         - Roles: ``IntegrationPermissionManager``
-        - Errors: ``conflict``, ``idempotency-key-in-flight``,
-          ``idempotency-key-reuse``, ``invalid-owner``, ``invalid-request``,
-          ``limit-exceeded``, ``not-found``, those of every call (``CommonProblem``,
-          ``CallError``)
+        - Errors: ``idempotency-key-in-flight``, ``idempotency-key-reuse``,
+          ``invalid-owner``, ``invalid-request``, ``limit-exceeded``, ``not-found``,
+          those of every call (``CommonProblem``, ``CallError``)
         - Idempotent: an ``Idempotency-Key`` is sent, so retries are safe; pass
           ``idempotency_key`` to choose it
         """
@@ -1210,16 +1218,20 @@ class AsyncPermissionsResource:
         """Replace a permission of a camera.
 
         Send the full representation: a field that is not given is removed. Changing the
-        plate or country changes the ``permissionId``; the response carries the new one.
-        The owner cannot be changed: remove the permission and create it for the new
-        owner.
+        plate or country makes it a new permission with a new ``permissionId``, which
+        the response carries; the old id answers ``not-found`` from then on. If a plate
+        limit refuses the new plate, the answer is ``limit-exceeded`` and the permission
+        is removed: create it again. If the permission changed while its plate was being
+        changed, the answer is ``conflict`` and nothing is changed: read it and try
+        again. The owner cannot be changed: remove the permission and create it for the
+        new owner.
 
         - ``PUT
           /locations/{locationId}/gates/{gateId}/cameras/{cameraId}/permissions/{permissionId}``
         - Roles: ``IntegrationPermissionManager``
         - Errors: ``conflict``, ``idempotency-key-in-flight``,
-          ``idempotency-key-reuse``, ``invalid-request``, ``not-found``, those of every
-          call (``CommonProblem``, ``CallError``)
+          ``idempotency-key-reuse``, ``invalid-request``, ``limit-exceeded``,
+          ``not-found``, those of every call (``CommonProblem``, ``CallError``)
         - Idempotent: an ``Idempotency-Key`` is sent, so retries are safe; pass
           ``idempotency_key`` to choose it
         """

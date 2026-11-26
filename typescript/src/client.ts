@@ -26,7 +26,11 @@ export interface EinarGateOptions {
    * reads it from `GET /me`.
    */
   readonly locationId?: string
-  /** Defaults to `https://api.einargate.com/v1` */
+  /**
+   * Defaults to `https://public-api.einargate.com/v1`. Must be https, as
+   * every call carries the API key; plain http is allowed only for
+   * localhost, for a local test server.
+   */
   readonly baseUrl?: string
   /** Per attempt, in milliseconds; defaults to 30 000 */
   readonly timeoutMs?: number
@@ -42,7 +46,7 @@ export interface EinarGateOptions {
   readonly appInfo?: { readonly name: string; readonly version?: string }
 }
 
-export const DEFAULT_BASE_URL = 'https://api.einargate.com/v1'
+export const DEFAULT_BASE_URL = 'https://public-api.einargate.com/v1'
 
 const PROBLEM_TYPE_BASE_URI = 'https://developers.einargate.com/errors/'
 
@@ -107,8 +111,8 @@ function createContext(options: EinarGateOptions): ClientContext {
 
   const context: ClientContext = new ClientContext(
     {
-      apiKey,
-      baseUrl: (options.baseUrl ?? DEFAULT_BASE_URL).replace(/\/+$/, ''),
+      authorization: () => `Bearer ${apiKey}`,
+      baseUrl: checkedBaseUrl(options.baseUrl ?? DEFAULT_BASE_URL),
       fetch: fetchFunction,
       timeoutMs: options.timeoutMs ?? 30_000,
       maxRetries: options.maxRetries ?? 2,
@@ -125,6 +129,35 @@ function createContext(options: EinarGateOptions): ClientContext {
     }
   )
   return context
+}
+
+const LOOPBACK_HOSTS = ['localhost', '127.0.0.1', '[::1]']
+
+/**
+ * The base URL without a trailing slash; a malformed one, or one that would
+ * send the API key in the clear, is refused here rather than at the first
+ * call
+ */
+function checkedBaseUrl(value: string): string {
+  let url: URL
+  try {
+    url = new URL(value)
+  } catch {
+    throw new TypeError(`baseUrl '${value}' is not a valid URL`)
+  }
+  if ((url.protocol !== 'https:' && url.protocol !== 'http:') || !url.host) {
+    throw new TypeError(
+      `baseUrl '${value}' must be an https URL with a host, such as ` +
+        `'${DEFAULT_BASE_URL}'`
+    )
+  }
+  if (url.protocol === 'http:' && !LOOPBACK_HOSTS.includes(url.hostname)) {
+    throw new TypeError(
+      `baseUrl '${value}' must be an https URL: the client sends the API ` +
+        'key with every call. Plain http is only for localhost.'
+    )
+  }
+  return value.replace(/\/+$/, '')
 }
 
 function userAgent(appInfo: EinarGateOptions['appInfo']): string {

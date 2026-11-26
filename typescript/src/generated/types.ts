@@ -212,8 +212,12 @@ export interface Event {
   readonly direction?: string
   readonly speed?: number
   readonly fraudRiskPercentage?: number
-  /** The permission that let the vehicle in */
-  readonly permission?: EventPermission
+  /**
+   * Every permission that let the vehicle in, as several can match a plate;
+   * empty when none did. One deleted since stays listed, as `deleted`.
+   * Automatic openings
+   */
+  readonly permissions?: readonly EventPermission[]
   readonly createdAt: Date
   readonly updatedAt: Date
 }
@@ -259,11 +263,17 @@ export interface EventInitiatorUser {
   readonly displayName: string
 }
 
-/** The permission that let the vehicle in */
+/** A permission that let the vehicle in */
 export interface EventPermission {
   readonly permissionId: string
   readonly cameraId: string
   readonly ownerUserId: string
+  /**
+   * Whether the permission has been deleted since; its id then answers
+   * `not-found`. A permission deleted before ids became opaque keeps its older
+   * form of id, which only names it within the event
+   */
+  readonly deleted: boolean
 }
 
 /** The recognized plate; automatic openings */
@@ -287,13 +297,13 @@ export interface EventWithAttachments extends Event {
 }
 
 /**
- * A camera that did not get the permission: `conflict` when it already has
- * one for the plate and country, `limit-exceeded` when a plate limit of the
- * location or the owner would be exceeded
+ * A camera that did not get the permission: a plate limit of the location or
+ * the owner would be exceeded, or the camera holds 10 permissions for the
+ * plate
  */
 export interface FailedCamera {
   readonly cameraId: string
-  readonly error: ConflictProblem | LimitExceededProblem | UnknownProblem
+  readonly error: LimitExceededProblem | UnknownProblem
 }
 
 export interface Gate {
@@ -383,9 +393,9 @@ export interface Member {
  */
 export interface Permission {
   /**
-   * **Opaque: store it as it is and URL-encode it in paths.** Find a
-   * permission by plate with the `licensePlate` filter instead of building an
-   * id.
+   * **Opaque: store it as it is and URL-encode it in paths.** It never changes
+   * while the permission exists. Find permissions by plate with the
+   * `licensePlate` filter.
    */
   readonly permissionId: string
   readonly locationId: string
@@ -423,8 +433,8 @@ export interface RateLimit {
  */
 export interface ReplacePermission {
   /**
-   * As typed; changing it changes the `permissionId`, which the response
-   * returns
+   * As typed; changing it makes a new permission with a new `permissionId`,
+   * which the response returns
    */
   readonly licensePlate: string
   /** `null` for a plate without a country */
@@ -467,9 +477,8 @@ export interface EventRef {
 // #region Problems
 
 /**
- * Conflict: The entity already exists (for a permission: the camera already
- * has the plate and country) or was changed at the same time. Read it again
- * before deciding; a concurrent change is safe to retry.
+ * Conflict: The entity already exists or was changed at the same time. Read
+ * it again before deciding; a concurrent change is safe to retry.
  */
 export interface ConflictProblem extends ProblemFields<'conflict', 409> {}
 
@@ -477,7 +486,7 @@ const CONFLICT_PROBLEM: ProblemType<'conflict', 409> = {
   slug: 'conflict',
   status: 409,
   title: 'Conflict',
-  hint: 'The entity already exists (for a permission: the camera already has the plate and country) or was changed at the same time. Read it again before deciding; a concurrent change is safe to retry.',
+  hint: 'The entity already exists or was changed at the same time. Read it again before deciding; a concurrent change is safe to retry.',
   docsUrl: 'https://developers.einargate.com/errors/conflict',
 }
 
@@ -957,7 +966,9 @@ export function decodeEvent(value: unknown, path: string): Event {
     direction: d.optional(o, 'direction', path, d.string),
     speed: d.optional(o, 'speed', path, d.number),
     fraudRiskPercentage: d.optional(o, 'fraudRiskPercentage', path, d.number),
-    permission: d.optional(o, 'permission', path, decodeEventPermission),
+    permissions: d.optional(o, 'permissions', path, (v: unknown, p: string) =>
+      d.array(v, p, decodeEventPermission)
+    ),
     createdAt: d.required(o, 'createdAt', path, d.timestamp),
     updatedAt: d.required(o, 'updatedAt', path, d.timestamp),
   })
@@ -1034,6 +1045,7 @@ export function decodeEventPermission(
     permissionId: d.required(o, 'permissionId', path, d.string),
     cameraId: d.required(o, 'cameraId', path, d.string),
     ownerUserId: d.required(o, 'ownerUserId', path, d.string),
+    deleted: d.required(o, 'deleted', path, d.boolean),
   })
 }
 
@@ -1079,7 +1091,9 @@ export function decodeEventWithAttachments(
     direction: d.optional(o, 'direction', path, d.string),
     speed: d.optional(o, 'speed', path, d.number),
     fraudRiskPercentage: d.optional(o, 'fraudRiskPercentage', path, d.number),
-    permission: d.optional(o, 'permission', path, decodeEventPermission),
+    permissions: d.optional(o, 'permissions', path, (v: unknown, p: string) =>
+      d.array(v, p, decodeEventPermission)
+    ),
     createdAt: d.required(o, 'createdAt', path, d.timestamp),
     updatedAt: d.required(o, 'updatedAt', path, d.timestamp),
     attachments: d.required(o, 'attachments', path, (v: unknown, p: string) =>
@@ -1097,8 +1111,7 @@ export function decodeFailedCamera(value: unknown, path: string): FailedCamera {
       'error',
       path,
       (v: unknown, p: string) =>
-        decodeEmbeddedProblem(v, p, ['conflict', 'limit-exceeded']) as
-          | ConflictProblem
+        decodeEmbeddedProblem(v, p, ['limit-exceeded']) as
           | LimitExceededProblem
           | UnknownProblem
     ),
@@ -1321,10 +1334,10 @@ export function encodeEvent(value: Event): Record<string, unknown> {
     direction: value.direction,
     speed: value.speed,
     fraudRiskPercentage: value.fraudRiskPercentage,
-    permission:
-      value.permission === undefined
+    permissions:
+      value.permissions === undefined
         ? undefined
-        : encodeEventPermission(value.permission),
+        : value.permissions.map((item) => encodeEventPermission(item)),
     createdAt: e.timestamp(value.createdAt),
     updatedAt: e.timestamp(value.updatedAt),
   })
@@ -1382,6 +1395,7 @@ export function encodeEventPermission(
     permissionId: value.permissionId,
     cameraId: value.cameraId,
     ownerUserId: value.ownerUserId,
+    deleted: value.deleted,
   })
 }
 
@@ -1428,10 +1442,10 @@ export function encodeEventWithAttachments(
     direction: value.direction,
     speed: value.speed,
     fraudRiskPercentage: value.fraudRiskPercentage,
-    permission:
-      value.permission === undefined
+    permissions:
+      value.permissions === undefined
         ? undefined
-        : encodeEventPermission(value.permission),
+        : value.permissions.map((item) => encodeEventPermission(item)),
     createdAt: e.timestamp(value.createdAt),
     updatedAt: e.timestamp(value.updatedAt),
     attachments: value.attachments.map((item) => encodeEventAttachment(item)),

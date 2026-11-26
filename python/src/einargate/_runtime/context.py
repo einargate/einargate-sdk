@@ -12,6 +12,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import contextvars
+import math
 import sys
 import threading
 from collections.abc import Awaitable, Callable
@@ -100,11 +101,15 @@ class ClientContext:
                     )
                 self._lookup = self._executor.submit(self._run_lookup)
             lookup = self._lookup
-        wait = attempt_timeout(timeout if timeout is not None else 1e9)
+        wait = attempt_timeout(timeout if timeout is not None else math.inf)
         if wait is None:
             return _waited_too_long(timeout or 0)
         try:
-            result = lookup.result(timeout=wait)
+            # A lock waits at most TIMEOUT_MAX, about 49 days on Windows, and
+            # raises OverflowError beyond it; no limit at all waits without one
+            result = lookup.result(
+                timeout=None if wait == math.inf else min(wait, threading.TIMEOUT_MAX)
+            )
         except FutureTimeout:
             return _waited_too_long(wait)
         except FutureCancelled:

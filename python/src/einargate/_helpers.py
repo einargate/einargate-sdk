@@ -209,8 +209,13 @@ class EventsResource(_Events):
         ``from_`` is now when left out. Oldest first, polling ``list``; each
         event is yielded once, as first seen: get it again for a later status.
         A failure is yielded and ends the iteration; stop it by breaking out
-        of the loop. An event that reaches the API late, with an earlier time
-        than the last one seen, is not yielded.
+        of the loop.
+
+        **It can skip events.** Events arrive in event time order, and an
+        event that reaches the API late, with an earlier time than the last
+        one yielded, is never yielded. Where every event counts, also
+        ``list_all`` the recent past now and then, and match it by
+        ``event_id``.
         """
         cursor = _start(from_)
         seen: set[str] = set()

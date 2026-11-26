@@ -33,10 +33,17 @@ jobs:
       - run: npm run build
 
   python:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
+        os: [ubuntu-latest]
         python: ['3.10', '3.11', '3.12', '3.13', '3.14']
+        # The package says it is OS independent, and Windows waits differ
+        include:
+          - os: windows-latest
+            python: '3.10'
+          - os: windows-latest
+            python: '3.14'
     defaults:
       run:
         working-directory: python

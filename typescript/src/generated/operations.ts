@@ -251,7 +251,6 @@ export const createLocationPermissionSpec: OperationSpec<t.CreatePermissionResul
     decode: t.decodeCreatePermissionResult,
     encode: (value) => t.encodeCreatePermissionResult(value),
     problems: {
-      conflict: t.decodeConflictProblem,
       forbidden: t.decodeForbiddenProblem,
       'idempotency-key-in-flight': t.decodeIdempotencyKeyInFlightProblem,
       'idempotency-key-reuse': t.decodeIdempotencyKeyReuseProblem,
@@ -278,7 +277,6 @@ export const createGatePermissionSpec: OperationSpec<t.CreatePermissionResult> =
     decode: t.decodeCreatePermissionResult,
     encode: (value) => t.encodeCreatePermissionResult(value),
     problems: {
-      conflict: t.decodeConflictProblem,
       forbidden: t.decodeForbiddenProblem,
       'idempotency-key-in-flight': t.decodeIdempotencyKeyInFlightProblem,
       'idempotency-key-reuse': t.decodeIdempotencyKeyReuseProblem,
@@ -305,7 +303,6 @@ export const createCameraPermissionSpec: OperationSpec<t.CreatePermissionResult>
     decode: t.decodeCreatePermissionResult,
     encode: (value) => t.encodeCreatePermissionResult(value),
     problems: {
-      conflict: t.decodeConflictProblem,
       forbidden: t.decodeForbiddenProblem,
       'idempotency-key-in-flight': t.decodeIdempotencyKeyInFlightProblem,
       'idempotency-key-reuse': t.decodeIdempotencyKeyReuseProblem,
@@ -358,6 +355,7 @@ export const replacePermissionSpec: OperationSpec<t.Permission> = {
     'idempotency-key-reuse': t.decodeIdempotencyKeyReuseProblem,
     internal: t.decodeInternalProblem,
     'invalid-request': t.decodeInvalidRequestProblem,
+    'limit-exceeded': t.decodeLimitExceededProblem,
     'not-found': t.decodeNotFoundProblem,
     provisioning: t.decodeProvisioningProblem,
     'rate-limited': t.decodeRateLimitedProblem,
@@ -582,7 +580,6 @@ export interface OperationTypes {
   createLocationPermission: {
     data: t.CreatePermissionResult
     problems:
-      | 'conflict'
       | 'forbidden'
       | 'idempotency-key-in-flight'
       | 'idempotency-key-reuse'
@@ -599,7 +596,6 @@ export interface OperationTypes {
   createGatePermission: {
     data: t.CreatePermissionResult
     problems:
-      | 'conflict'
       | 'forbidden'
       | 'idempotency-key-in-flight'
       | 'idempotency-key-reuse'
@@ -616,7 +612,6 @@ export interface OperationTypes {
   createCameraPermission: {
     data: t.CreatePermissionResult
     problems:
-      | 'conflict'
       | 'forbidden'
       | 'idempotency-key-in-flight'
       | 'idempotency-key-reuse'
@@ -651,6 +646,7 @@ export interface OperationTypes {
       | 'idempotency-key-reuse'
       | 'internal'
       | 'invalid-request'
+      | 'limit-exceeded'
       | 'not-found'
       | 'provisioning'
       | 'rate-limited'
@@ -775,7 +771,6 @@ export type ListPermissionsError =
 
 /** The errors `permissions.create` can return */
 export type CreatePermissionError =
-  | t.ConflictProblem
   | t.IdempotencyKeyInFlightProblem
   | t.IdempotencyKeyReuseProblem
   | t.InvalidOwnerProblem
@@ -798,6 +793,7 @@ export type ReplacePermissionError =
   | t.IdempotencyKeyInFlightProblem
   | t.IdempotencyKeyReuseProblem
   | t.InvalidRequestProblem
+  | t.LimitExceededProblem
   | t.NotFoundProblem
   | CommonProblem
   | CallError

@@ -1,9 +1,9 @@
 {
   "name": "@einargate/sdk",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "The official TypeScript client of the Einar Gate API: typed results, safe retries, built for coding agents",
   "license": "MIT",
-  "homepage": "https://github.com/einargate/einargate-sdk/tree/main/typescript#readme",
+  "homepage": "https://developers.einargate.com/sdks/typescript",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/einargate/einargate-sdk.git",
@@ -58,7 +58,7 @@
     "access": "public"
   },
   "devDependencies": {
-    "@types/node": "^22.15.0",
+    "@types/node": "^22.20.5",
     "prettier": "3.5.3",
     "typescript": "^5.8.3",
     "vitest": "^3.0.5"
